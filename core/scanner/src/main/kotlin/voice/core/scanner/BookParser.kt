@@ -45,9 +45,7 @@ internal class BookParser(
       addedAt = Instant.now(),
       author = analyzed?.artist,
       lastPlayedAt = Instant.EPOCH,
-      name = analyzed?.album
-        ?: analyzed?.title?.takeIf { file.isFile }
-        ?: file.bookName(),
+      name = file.folderName(),
       playbackSpeed = 1F,
       skipSilence = false,
       chapters = chapters.map { it.id },
@@ -81,6 +79,22 @@ internal class BookParser(
         fileName
       }
     }
+  }
+
+  private fun CachedDocumentFile.folderName(): String {
+    return if (isDirectory) {
+      name ?: uri.pathSegments.lastOrNull() ?: uri.toString()
+    } else {
+      // For single files, get parent folder name
+      val segments = uri.pathSegments
+      if (segments.size > 1) {
+        segments[segments.lastIndex - 1]
+      } else {
+        segments.lastOrNull() ?: uri.toString()
+      }
+    }.removePrefix("/storage/emulated/0/")
+     .removePrefix("/storage/emulated/")
+     .removePrefix("/storage/")
   }
 }
 
