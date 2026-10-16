@@ -4,15 +4,10 @@ plugins {
   alias(libs.plugins.metro)
 }
 
-android {
-  androidResources {
-    enable = true
-  }
-}
-
 dependencies {
   implementation(projects.navigation)
   implementation(projects.core.common)
+  implementation(projects.core.data.api)
   implementation(projects.core.strings)
   implementation(projects.core.ui)
 

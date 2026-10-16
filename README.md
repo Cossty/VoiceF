@@ -1,10 +1,9 @@
 # Voice
 
 [![CI](https://github.com/PaulWoitaschek/Voice/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/PaulWoitaschek/Voice/actions/workflows/ci.yml)
-[![Translation status](https://hosted.weblate.org/widgets/voice/-/svg-badge.svg)](https://hosted.weblate.org/engage/voice/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://voice.woitaschek.de/license/)
 
-**A minimalistic, user-focused audiobook player for Android, built for reliability and simplicity.**
+**A clean, user-focused audiobook player for Android, built to be reliable and a joy to use.**
 
 Voice turns your own audiobook files into a calm, focused listening library. It remembers where you stopped, keeps playback controls close, and includes the audiobook-specific details that generic music players miss: chapter navigation, sleep timer, bookmarks, playback speed, silence skipping, and auto-rewind after pauses.
 
@@ -39,11 +38,13 @@ The [documentation website](https://voice.woitaschek.de) covers features, the ph
 
 ## Contributing
 
-Contributions are very welcome: code, translations, bug reports, or ideas. Start with [Development](https://voice.woitaschek.de/development/) and [Architecture](https://voice.woitaschek.de/architecture/), or help translate Voice on [Weblate](https://hosted.weblate.org/engage/voice/).
+Bug reports and feature requests are very welcome, see the [Contributing guide](https://voice.woitaschek.de/contributing/). Pull requests only on request.
+
+To find your way around the code, start with [Development](https://voice.woitaschek.de/development/) and [Architecture](https://voice.woitaschek.de/architecture/).
 
 ## Support Voice
 
-Voice is free and built in spare time. If it has been useful to you, consider chipping in. One-time or monthly, no sign-up required:
+Voice has no ads, no investors and no company behind it. It's made by one developer and kept going by its listeners. Monthly support is what lets me plan the next release, not just the next fix. Ko-fi needs no account:
 
 <a href="https://ko-fi.com/paul_voice">
   <img alt="Support on Ko-fi"
@@ -51,7 +52,7 @@ Voice is free and built in spare time. If it has been useful to you, consider ch
        src="https://storage.ko-fi.com/cdn/brandasset/v2/support_me_on_kofi_dark.png" />
 </a>
 
-You can also [sponsor on GitHub](https://github.com/sponsors/PaulWoitaschek) if you prefer.
+Or [sponsor monthly on GitHub](https://github.com/sponsors/PaulWoitaschek). A one-time tip helps too.
 
 ## License
 

@@ -1,15 +1,17 @@
 package voice.core.featureflag
 
 import dev.zacsweers.metro.AppScope
-import dev.zacsweers.metro.Binds
+import dev.zacsweers.metro.BindingContainer
 import dev.zacsweers.metro.ContributesTo
-import dev.zacsweers.metro.IntoSet
+import dev.zacsweers.metro.ElementsIntoSet
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.Qualifier
 import dev.zacsweers.metro.SingleIn
+import voice.core.common.AppInfoProvider
 
+@BindingContainer
 @ContributesTo(AppScope::class)
-interface FeatureFlagBindingContainer {
+object FeatureFlagBindingContainer {
 
   @Provides
   @SingleIn(AppScope::class)
@@ -17,14 +19,20 @@ interface FeatureFlagBindingContainer {
   fun reviewEnabledFeatureFlag(factory: FeatureFlagFactory): FeatureFlag<Boolean> {
     return factory.boolean(
       key = "review_enabled",
-      description = "Shows the in-app review prompt when the review conditions are met.",
+      description = "Shows the rating prompt after a finished book or a listening milestone.",
       defaultValue = false,
     )
   }
 
-  @Binds
-  @IntoSet
-  fun bindReviewEnabledFeatureFlag(@ReviewEnabledFeatureFlagQualifier flag: FeatureFlag<Boolean>): FeatureFlag<*>
+  @Provides
+  @SingleIn(AppScope::class)
+  @ReviewPromptForceFeatureFlagQualifier
+  fun reviewPromptForceFeatureFlag(factory: FeatureFlagFactory): FeatureFlag<Boolean> {
+    return factory.boolean(
+      key = "review_prompt_force",
+      description = "Shows the rating prompt on the next visit to the library, ignoring its rules.",
+    )
+  }
 
   @Provides
   @SingleIn(AppScope::class)
@@ -44,12 +52,9 @@ interface FeatureFlagBindingContainer {
     return factory.boolean(
       key = "folder_picker_in_settings",
       description = "Shows the folder picker entry directly in settings.",
+      defaultValue = false,
     )
   }
-
-  @Binds
-  @IntoSet
-  fun bindFolderPickerInSettingsFeatureFlag(@FolderPickerInSettingsFeatureFlagQualifier flag: FeatureFlag<Boolean>): FeatureFlag<*>
 
   @Provides
   @SingleIn(AppScope::class)
@@ -61,10 +66,6 @@ interface FeatureFlagBindingContainer {
     )
   }
 
-  @Binds
-  @IntoSet
-  fun bindExperimentalPlaybackPersistenceFeatureFlag(@ExperimentalPlaybackPersistenceQualifier flag: FeatureFlag<Boolean>): FeatureFlag<*>
-
   @Provides
   @SingleIn(AppScope::class)
   @Media3AudioOffloadFeatureFlagQualifier
@@ -74,10 +75,6 @@ interface FeatureFlagBindingContainer {
       description = "Uses Media3 audio offload when the device supports it.",
     )
   }
-
-  @Binds
-  @IntoSet
-  fun bindMedia3AudioOffloadFeatureFlag(@Media3AudioOffloadFeatureFlagQualifier flag: FeatureFlag<Boolean>): FeatureFlag<*>
 
   @Provides
   @SingleIn(AppScope::class)
@@ -89,13 +86,71 @@ interface FeatureFlagBindingContainer {
     )
   }
 
-  @Binds
-  @IntoSet
-  fun bindKioskModeFeatureFlag(@KioskModeFeatureFlagQualifier flag: FeatureFlag<Boolean>): FeatureFlag<*>
+  @Provides
+  @SingleIn(AppScope::class)
+  @SupportDevelopmentFeatureFlagQualifier
+  fun supportDevelopmentFeatureFlag(
+    factory: FeatureFlagFactory,
+    appInfoProvider: AppInfoProvider,
+  ): FeatureFlag<Boolean> {
+    return factory.boolean(
+      key = "support_development",
+      description = "Shows the support card in the settings. Play builds turn it on remotely once the supporter products are live.",
+      defaultValue = appInfoProvider.supportDevelopmentIncluded,
+    )
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @SupporterNoteFeatureFlagQualifier
+  fun supporterNoteFeatureFlag(factory: FeatureFlagFactory): FeatureFlag<String> {
+    return factory.string(
+      key = "supporter_note",
+      description = "A note on the support sheet, e.g. what the support paid for this month. Hidden when empty.",
+      defaultValue = "",
+    )
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @AudiobookshelfFeatureFlagQualifier
+  fun audiobookshelfFeatureFlag(factory: FeatureFlagFactory): FeatureFlag<Boolean> {
+    return factory.boolean(
+      key = "audiobookshelf",
+      description = "Lets listeners connect an Audiobookshelf server. A server that is connected stays, also when this is off.",
+    )
+  }
+
+  @Provides
+  @ElementsIntoSet
+  fun featureFlags(
+    @ReviewEnabledFeatureFlagQualifier reviewEnabled: FeatureFlag<Boolean>,
+    @ReviewPromptForceFeatureFlagQualifier reviewPromptForce: FeatureFlag<Boolean>,
+    @FolderPickerInSettingsFeatureFlagQualifier folderPickerInSettings: FeatureFlag<Boolean>,
+    @ExperimentalPlaybackPersistenceQualifier experimentalPlaybackPersistence: FeatureFlag<Boolean>,
+    @Media3AudioOffloadFeatureFlagQualifier media3AudioOffload: FeatureFlag<Boolean>,
+    @KioskModeFeatureFlagQualifier kioskMode: FeatureFlag<Boolean>,
+    @SupportDevelopmentFeatureFlagQualifier supportDevelopment: FeatureFlag<Boolean>,
+    @SupporterNoteFeatureFlagQualifier supporterNote: FeatureFlag<String>,
+    @AudiobookshelfFeatureFlagQualifier audiobookshelf: FeatureFlag<Boolean>,
+  ): Set<FeatureFlag<*>> = setOf(
+    reviewEnabled,
+    reviewPromptForce,
+    folderPickerInSettings,
+    experimentalPlaybackPersistence,
+    media3AudioOffload,
+    kioskMode,
+    supportDevelopment,
+    supporterNote,
+    audiobookshelf,
+  )
 }
 
 @Qualifier
 annotation class ReviewEnabledFeatureFlagQualifier
+
+@Qualifier
+annotation class ReviewPromptForceFeatureFlagQualifier
 
 @Qualifier
 annotation class UserAgentFeatureFlagQualifier
@@ -111,3 +166,12 @@ annotation class Media3AudioOffloadFeatureFlagQualifier
 
 @Qualifier
 annotation class KioskModeFeatureFlagQualifier
+
+@Qualifier
+annotation class SupportDevelopmentFeatureFlagQualifier
+
+@Qualifier
+annotation class SupporterNoteFeatureFlagQualifier
+
+@Qualifier
+annotation class AudiobookshelfFeatureFlagQualifier

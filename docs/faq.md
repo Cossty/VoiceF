@@ -4,9 +4,10 @@ Yes, Voice fully supports Android Auto!
 
 !!! warning
 
-    For Android Auto functionality to work, you must install Voice directly from the
+    For officially supported Android Auto functionality, install Voice from the
     [Google Play Store](https://play.google.com/store/apps/details?id=de.ph1b.audiobook).
-    This is because Android Auto integration requires versions that have been reviewed and approved by the Google Play team.
+    Other sources may work on some setups, but are not guaranteed.
+    See the [download source comparison](download-sources.md) for details.
 
 ### Why doesn't Voice support the xyz Media Format?
 
@@ -17,15 +18,11 @@ If a file that should be supported is not displayed, it is most likely either co
 
 ### Why isn’t feature xyz available in the app?
 
-I adhere to a core design principle of minimalism. As such, the app will only include settings and UI components that are absolutely
-essential.
+I add features when they make listening better for many listeners. Each one has to be maintained for years, and every new setting makes
+the app a bit harder to use. So I prefer good defaults over options and keep each screen focused on listening.
 
-### How can I join the beta?
-
-To participate in the public beta, you can either:
-
-- [Join via the Web](https://play.google.com/store/apps/details?id=de.ph1b.audiobook)
-- [Join through Google Play](https://play.google.com/apps/testing/de.ph1b.audiobook)
+If you're missing something, [open a feature request](https://github.com/PaulWoitaschek/Voice/discussions/new?category=ideas) and describe
+what you'd like to do.
 
 ### Which Voice version should I use on older Android?
 
@@ -53,3 +50,20 @@ Once the sleep timer elapses, Voice pauses playback (after a brief fade-out). To
 !!! warning
 
     On some devices (e.g. Samsung S20fe) shake-to-resume may not work reliably.
+
+### How do I continue a book on another device?
+
+Voice keeps your place, your playback speed, your bookmarks and the names you gave your books in a hidden `.voice`
+folder inside each audiobook folder you added. Sync these folders between your devices with a tool of your own, like
+[Syncthing](https://syncthing.net), and when you open Voice on the other device, it picks up where you left off.
+
+- Add the same folder on every device, and the same way, for example as "Every folder is a book" on both. Where the
+  folder is on each device doesn't matter.
+- The folder has to be on the device. Folders from cloud apps like Google Drive don't sync.
+- The audio files of a book have to be the same on every device.
+- Books you added as a single file don't sync. Add the folder they're in instead.
+- Your sync tool has to copy hidden folders.
+- A book that is playing stays where it is.
+
+If you share a folder with your family and don't want each other's place, names and bookmarks, let your sync tool
+ignore `.voice`. In Syncthing, add `.voice` to the folder's ignore patterns.

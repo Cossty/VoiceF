@@ -3,23 +3,31 @@ package voice.core.playback.di
 import android.content.Context
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionParameters
+import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
-import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaLibraryService
+import dev.zacsweers.metro.BindingContainer
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import voice.core.data.AUDIOBOOKSHELF_SCHEME
 import voice.core.featureflag.FeatureFlag
 import voice.core.featureflag.Media3AudioOffloadFeatureFlagQualifier
+import voice.core.logging.api.Logger
+import voice.core.playback.history.AutomaticPauseRecorder
+import voice.core.playback.history.CommandSourceResolver
 import voice.core.playback.misc.VolumeGain
 import voice.core.playback.notification.MainActivityIntentProvider
 import voice.core.playback.player.DurationInconsistenciesUpdater
@@ -30,18 +38,24 @@ import voice.core.playback.playstate.PlayStateDelegatingListener
 import voice.core.playback.playstate.PositionUpdater
 import voice.core.playback.session.LibrarySessionCallback
 import voice.core.playback.session.PlaybackService
+import voice.core.playback.stats.ListeningSessionRecorder
 import voice.core.strings.R as StringsR
 
+@BindingContainer
 @ContributesTo(PlaybackScope::class)
-interface PlaybackModule {
+object PlaybackModule {
 
   @Provides
   @SingleIn(PlaybackScope::class)
-  fun mediaSourceFactory(context: Context): MediaSource.Factory {
-    val dataSourceFactory = DefaultDataSource.Factory(context)
+  fun mediaSourceFactory(
+    context: Context,
+    @RemoteMediaDataSource remoteDataSourceFactory: DataSource.Factory,
+  ): MediaSource.Factory {
+    // schemes the default data source doesn't know, like the ids of server books, go to the remote one
+    val dataSourceFactory = DefaultDataSource.Factory(context, remoteDataSourceFactory)
     val extractorsFactory = DefaultExtractorsFactory()
       .setConstantBitrateSeekingEnabled(true)
-    return ProgressiveMediaSource.Factory(dataSourceFactory, extractorsFactory)
+    return DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory)
   }
 
   @Provides
@@ -54,8 +68,10 @@ interface PlaybackModule {
     positionUpdater: PositionUpdater,
     volumeGain: VolumeGain,
     durationInconsistenciesUpdater: DurationInconsistenciesUpdater,
+    automaticPauseRecorder: AutomaticPauseRecorder,
+    listeningSessionRecorder: ListeningSessionRecorder,
     @Media3AudioOffloadFeatureFlagQualifier media3AudioOffloadFeatureFlag: FeatureFlag<Boolean>,
-  ): Player {
+  ): ExoPlayer {
     val audioAttributes = AudioAttributes.Builder()
       .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
       .setUsage(C.USAGE_MEDIA)
@@ -65,6 +81,7 @@ interface PlaybackModule {
       .setAudioAttributes(audioAttributes, true)
       .setHandleAudioBecomingNoisy(true)
       .setWakeMode(C.WAKE_MODE_LOCAL)
+      .setMaxSeekToPreviousPositionMs(2_000)
       .build()
       .also { player ->
         if (media3AudioOffloadFeatureFlag.get()) {
@@ -82,9 +99,27 @@ interface PlaybackModule {
         playStateDelegatingListener.attachTo(player)
         positionUpdater.attachTo(player)
         durationInconsistenciesUpdater.attachTo(player)
+        automaticPauseRecorder.attachTo(player)
+        listeningSessionRecorder.attachTo(player)
         player.onAudioSessionIdChanged {
           volumeGain.audioSessionId = it
         }
+        player.addListener(
+          object : Player.Listener {
+            // a server book streams, and over Wi-Fi that needs the Wi-Fi to stay awake while the screen is off
+            override fun onMediaItemTransition(
+              mediaItem: MediaItem?,
+              reason: Int,
+            ) {
+              val streams = mediaItem?.localConfiguration?.uri?.scheme == AUDIOBOOKSHELF_SCHEME
+              player.setWakeMode(if (streams) C.WAKE_MODE_NETWORK else C.WAKE_MODE_LOCAL)
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+              Logger.w(error, "Playback failed: ${error.errorCodeName}")
+            }
+          },
+        )
       }
   }
 
@@ -100,6 +135,7 @@ interface PlaybackModule {
     callback: LibrarySessionCallback,
     mainActivityIntentProvider: MainActivityIntentProvider,
     context: Context,
+    commandSourceResolver: CommandSourceResolver,
   ): MediaLibraryService.MediaLibrarySession {
     return MediaLibraryService.MediaLibrarySession.Builder(service, player, callback)
       .setSessionActivity(mainActivityIntentProvider.toCurrentBook())
@@ -118,5 +154,6 @@ interface PlaybackModule {
         ),
       )
       .build()
+      .also { commandSourceResolver.session = it }
   }
 }

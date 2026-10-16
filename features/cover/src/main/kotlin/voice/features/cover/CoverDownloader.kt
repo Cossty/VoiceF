@@ -1,6 +1,7 @@
 package voice.features.cover
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -31,23 +32,40 @@ class CoverDownloader(
     val response = try {
       client.newCall(request).executeAsync()
     } catch (e: IOException) {
-      Logger.w(e, "Failed to download cover from $url")
+      Logger.w(e, "Cover download failed")
       return null
     }
-    return withContext(Dispatchers.IO) {
-      try {
-        response.body.source().use { source ->
+    return response.use {
+      if (!response.isSuccessful) {
+        Logger.w("Cover download failed with HTTP ${response.code}")
+        return null
+      }
+      withContext(Dispatchers.IO) {
+        try {
           // select a random name so on updating this, the old image is not cached
           val file = File(tempFolder, Uuid.random().toString())
           file.sink().use { sink ->
-            source.readAll(sink)
+            response.body.source().readAll(sink)
           }
-          file
+          // some image urls lead to a web page instead
+          if (file.isImage()) {
+            file
+          } else {
+            Logger.w("Downloaded cover is no image (${response.body.contentType()})")
+            file.delete()
+            null
+          }
+        } catch (e: IOException) {
+          Logger.w(e, "Can't save the downloaded cover")
+          null
         }
-      } catch (e: IOException) {
-        Logger.w(e, "Failed to save cover from $url")
-        null
       }
     }
   }
+}
+
+private fun File.isImage(): Boolean {
+  val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+  BitmapFactory.decodeFile(path, options)
+  return options.outWidth > 0 && options.outHeight > 0
 }

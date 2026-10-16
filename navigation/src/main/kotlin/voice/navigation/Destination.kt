@@ -6,6 +6,7 @@ import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 import voice.core.common.serialization.UriSerializer
 import voice.core.data.BookId
+import voice.core.data.folders.FolderType
 
 sealed interface Destination {
 
@@ -15,8 +16,17 @@ sealed interface Destination {
   }
 
   @Serializable
-  data class Bookmarks(val bookId: BookId) : Compose {
+  data class Bookmarks(
+    val bookId: BookId,
+    /** Opens the editor for this bookmark, e.g. to add a note right after saving it. */
+    val editBookmarkId: String? = null,
+  ) : Compose {
     override val trackingName: String get() = "Bookmarks"
+  }
+
+  @Serializable
+  data class BookActions(val bookId: BookId) : Compose {
+    override val trackingName: String get() = "BookActions"
   }
 
   @Serializable
@@ -51,6 +61,11 @@ sealed interface Destination {
   }
 
   @Serializable
+  data object SupportVoice : Compose {
+    override val trackingName: String get() = "SupportVoice"
+  }
+
+  @Serializable
   data object DeveloperSettings : Compose {
     override val trackingName: String get() = "DeveloperSettings"
   }
@@ -58,6 +73,11 @@ sealed interface Destination {
   @Serializable
   data object BookOverview : Compose {
     override val trackingName: String get() = "BookOverview"
+  }
+
+  @Serializable
+  data object LibrarySearch : Compose {
+    override val trackingName: String get() = "LibrarySearch"
   }
 
   @Serializable
@@ -71,6 +91,8 @@ sealed interface Destination {
     @Serializable(with = UriSerializer::class)
     Uri,
     val origin: Origin,
+    // set when changing the type of a folder that was added before
+    val currentType: FolderType? = null,
   ) : Compose {
     override val trackingName: String = "SelectFolderType"
   }
@@ -95,5 +117,19 @@ sealed interface Destination {
   @Serializable
   data class AddContent(val origin: Origin) : Compose {
     override val trackingName: String = "AddContent"
+  }
+
+  @Serializable
+  data class AudiobookshelfLogin(
+    val origin: Origin,
+    // signs in again after the server declined the stored login
+    val renew: Boolean = false,
+  ) : Compose {
+    override val trackingName: String = "AudiobookshelfLogin"
+  }
+
+  @Serializable
+  data object AudiobookshelfSettings : Compose {
+    override val trackingName: String get() = "AudiobookshelfSettings"
   }
 }

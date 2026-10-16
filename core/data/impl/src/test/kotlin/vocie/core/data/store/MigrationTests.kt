@@ -11,21 +11,28 @@ import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
 import dev.zacsweers.metro.createGraph
-import io.kotest.matchers.booleans.shouldBeFalse
-import io.kotest.matchers.shouldBe
+import io.mockk.mockk
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
-import org.junit.Test
 import org.junit.runner.RunWith
 import voice.core.common.AppInfoProvider
 import voice.core.data.GridMode
+import voice.core.data.ReviewPromptState
+import voice.core.data.ThemeColorScheme
+import voice.core.data.ThemeMode
 import voice.core.data.store.AutoRewindAmountStore
-import voice.core.data.store.DarkThemeStore
 import voice.core.data.store.GridModeStore
+import voice.core.data.store.ReviewPromptStateStore
 import voice.core.data.store.SeekTimeStore
+import voice.core.data.store.ThemeColorSchemeStore
+import voice.core.data.store.ThemeModeStore
 import voice.core.data.store.VoiceDataStoreFactory
 import voice.core.data.store.intPrefsDataMigration
+import java.io.File
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 @Suppress("SUSPICIOUS_UNUSED_MULTIBINDING")
 @SingleIn(AppScope::class)
@@ -40,11 +47,17 @@ interface MigrationTestGraph {
   @AutoRewindAmountStore
   val autoRewindAmountStore: DataStore<Int>
 
-  @DarkThemeStore
-  val darkThemeStore: DataStore<Boolean>
+  @ThemeModeStore
+  val themeModeStore: DataStore<ThemeMode>
+
+  @ThemeColorSchemeStore
+  val themeColorSchemeStore: DataStore<ThemeColorScheme>
 
   @GridModeStore
   val gridModeStore: DataStore<GridMode>
+
+  @ReviewPromptStateStore
+  val reviewPromptStateStore: DataStore<ReviewPromptState>
 
   @Provides
   val application: Application get() = ApplicationProvider.getApplicationContext()
@@ -54,10 +67,7 @@ interface MigrationTestGraph {
 
   @Provides
   val appInfoProvider: AppInfoProvider
-    get() = object : AppInfoProvider {
-      override val versionName: String get() = "1.2.3"
-      override val analyticsIncluded: Boolean get() = false
-    }
+    get() = mockk()
 
   val sharedPreferences: SharedPreferences
 }
@@ -80,8 +90,8 @@ class MigrationTests {
     }
 
     val store = testGraph.seekTimeStore
-    store.data.first() shouldBe expected
-    sharedPreferences.contains("SEEK_TIME") shouldBe false
+    assertEquals(expected = expected, actual = store.data.first())
+    assertEquals(expected = false, actual = sharedPreferences.contains("SEEK_TIME"))
   }
 
   @Test
@@ -93,30 +103,54 @@ class MigrationTests {
     }
 
     val store = testGraph.autoRewindAmountStore
-    store.data.first() shouldBe expected
-    sharedPreferences.contains("AUTO_REWIND") shouldBe false
+    assertEquals(expected = expected, actual = store.data.first())
+    assertEquals(expected = false, actual = sharedPreferences.contains("AUTO_REWIND"))
   }
 
   @Test
-  fun `darkTheme migrates from SharedPreferences and cleans up`() = runTest {
-    val expected = true
+  fun `legacy darkTheme true migrates to dark and cleans up`() = runTest {
     sharedPreferences.edit {
       clear()
-      putBoolean("darkTheme", expected)
+      putBoolean("darkTheme", true)
     }
 
-    val store = testGraph.darkThemeStore
-    store.data.first() shouldBe expected
-    sharedPreferences.contains("darkTheme") shouldBe false
+    val store = testGraph.themeModeStore
+    assertEquals(expected = ThemeMode.Dark, actual = store.data.first())
+    assertEquals(expected = false, actual = sharedPreferences.contains("darkTheme"))
+  }
+
+  @Test
+  fun `legacy darkTheme false migrates to light and cleans up`() = runTest {
+    sharedPreferences.edit {
+      clear()
+      putBoolean("darkTheme", false)
+    }
+
+    val store = testGraph.themeModeStore
+    assertEquals(expected = ThemeMode.Light, actual = store.data.first())
+    assertEquals(expected = false, actual = sharedPreferences.contains("darkTheme"))
+  }
+
+  @Test
+  fun `legacy darkTheme DataStore migrates and cleans up`() = runTest {
+    sharedPreferences.edit { clear() }
+    val oldDataStoreFile = File(ApplicationProvider.getApplicationContext<Application>().filesDir, "datastore/darkTheme")
+    oldDataStoreFile.parentFile!!.mkdirs()
+    oldDataStoreFile.writeText("true")
+
+    val store = testGraph.themeModeStore
+    assertEquals(expected = ThemeMode.Dark, actual = store.data.first())
+    assertEquals(expected = false, actual = oldDataStoreFile.exists())
   }
 
   @Test
   fun `defaults are used when SharedPreferences empty`() = runTest {
     sharedPreferences.edit { clear() }
 
-    testGraph.seekTimeStore.data.first() shouldBe 20
-    testGraph.autoRewindAmountStore.data.first() shouldBe 2
-    testGraph.darkThemeStore.data.first() shouldBe false
+    assertEquals(expected = 20, actual = testGraph.seekTimeStore.data.first())
+    assertEquals(expected = 2, actual = testGraph.autoRewindAmountStore.data.first())
+    assertEquals(expected = ThemeMode.FollowSystem, actual = testGraph.themeModeStore.data.first())
+    assertEquals(expected = ThemeColorScheme.VoiceBlue, actual = testGraph.themeColorSchemeStore.data.first())
   }
 
   @Test
@@ -126,8 +160,8 @@ class MigrationTests {
       putInt("OTHER_KEY", 50)
     }
 
-    testGraph.seekTimeStore.data.first() shouldBe 20
-    sharedPreferences.contains("OTHER_KEY") shouldBe true
+    assertEquals(expected = 20, actual = testGraph.seekTimeStore.data.first())
+    assertEquals(expected = true, actual = sharedPreferences.contains("OTHER_KEY"))
   }
 
   @Test
@@ -139,13 +173,13 @@ class MigrationTests {
       putBoolean("darkTheme", true)
     }
 
-    testGraph.seekTimeStore.data.first() shouldBe 15
-    testGraph.autoRewindAmountStore.data.first() shouldBe 5
-    testGraph.darkThemeStore.data.first() shouldBe true
+    assertEquals(expected = 15, actual = testGraph.seekTimeStore.data.first())
+    assertEquals(expected = 5, actual = testGraph.autoRewindAmountStore.data.first())
+    assertEquals(expected = ThemeMode.Dark, actual = testGraph.themeModeStore.data.first())
 
     listOf("SLEEP_TIME", "SEEK_TIME", "AUTO_REWIND", "darkTheme")
       .forEach {
-        sharedPreferences.contains(it).shouldBeFalse()
+        assertFalse(sharedPreferences.contains(it))
       }
   }
 
@@ -160,8 +194,8 @@ class MigrationTests {
       defaultValue = 0,
       migrations = listOf(intPrefsDataMigration(sharedPreferences, "TEST_INT_KEY")),
     )
-    ds.data.first() shouldBe 123
-    sharedPreferences.contains("TEST_INT_KEY") shouldBe false
+    assertEquals(expected = 123, actual = ds.data.first())
+    assertEquals(expected = false, actual = sharedPreferences.contains("TEST_INT_KEY"))
   }
 
   @Test
@@ -172,8 +206,8 @@ class MigrationTests {
     }
 
     val store = testGraph.gridModeStore
-    store.data.first() shouldBe GridMode.LIST
-    sharedPreferences.contains("gridView") shouldBe false
+    assertEquals(expected = GridMode.LIST, actual = store.data.first())
+    assertEquals(expected = false, actual = sharedPreferences.contains("gridView"))
   }
 
   @Test
@@ -184,8 +218,8 @@ class MigrationTests {
     }
 
     val store = testGraph.gridModeStore
-    store.data.first() shouldBe GridMode.GRID
-    sharedPreferences.contains("gridView") shouldBe false
+    assertEquals(expected = GridMode.GRID, actual = store.data.first())
+    assertEquals(expected = false, actual = sharedPreferences.contains("gridView"))
   }
 
   @Test
@@ -193,8 +227,8 @@ class MigrationTests {
     sharedPreferences.edit { clear() }
 
     val store = testGraph.gridModeStore
-    store.data.first() shouldBe GridMode.FOLLOW_DEVICE
-    sharedPreferences.contains("gridView") shouldBe false
+    assertEquals(expected = GridMode.FOLLOW_DEVICE, actual = store.data.first())
+    assertEquals(expected = false, actual = sharedPreferences.contains("gridView"))
   }
 
   @Test
@@ -205,7 +239,35 @@ class MigrationTests {
     }
 
     val store = testGraph.gridModeStore
-    store.data.first() shouldBe GridMode.FOLLOW_DEVICE
-    sharedPreferences.contains("gridView") shouldBe false
+    assertEquals(expected = GridMode.FOLLOW_DEVICE, actual = store.data.first())
+    assertEquals(expected = false, actual = sharedPreferences.contains("gridView"))
+  }
+
+  @Test
+  fun `a shown review dialog means the review prompt is done`() = runTest {
+    val oldDataStoreFile = legacyReviewDialogShownFile("true")
+
+    assertEquals(expected = ReviewPromptState(done = true), actual = testGraph.reviewPromptStateStore.data.first())
+    assertEquals(expected = false, actual = oldDataStoreFile.exists())
+  }
+
+  @Test
+  fun `a review dialog not shown yet keeps the review prompt open`() = runTest {
+    val oldDataStoreFile = legacyReviewDialogShownFile("false")
+
+    assertEquals(expected = ReviewPromptState(), actual = testGraph.reviewPromptStateStore.data.first())
+    assertEquals(expected = false, actual = oldDataStoreFile.exists())
+  }
+
+  @Test
+  fun `the review prompt starts fresh without a legacy file`() = runTest {
+    assertEquals(expected = ReviewPromptState(), actual = testGraph.reviewPromptStateStore.data.first())
+  }
+
+  private fun legacyReviewDialogShownFile(content: String): File {
+    val file = File(ApplicationProvider.getApplicationContext<Application>().filesDir, "datastore/reviewDialogShown")
+    file.parentFile!!.mkdirs()
+    file.writeText(content)
+    return file
   }
 }

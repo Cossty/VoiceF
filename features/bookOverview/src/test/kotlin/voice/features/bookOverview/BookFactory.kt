@@ -3,6 +3,7 @@ package voice.features.bookOverview
 import voice.core.data.Book
 import voice.core.data.BookContent
 import voice.core.data.BookId
+import voice.core.data.BookMetadata
 import voice.core.data.Chapter
 import voice.core.data.ChapterId
 import java.time.Instant
@@ -14,26 +15,36 @@ fun book(
   currentChapter: ChapterId = chapters.first().id,
   name: String = Uuid.random().toString(),
   author: String? = Uuid.random().toString(),
+  narrator: String? = null,
+  genre: String? = null,
+  series: String? = null,
 ): Book {
   return Book(
     content = BookContent(
-      author = author,
-      name = name,
       positionInChapter = time,
       playbackSpeed = 1F,
       addedAt = Instant.EPOCH,
       chapters = chapters.map { it.id },
-      cover = null,
       currentChapter = currentChapter,
       isActive = true,
       lastPlayedAt = Instant.EPOCH,
       skipSilence = false,
       id = BookId(Uuid.random().toString()),
       gain = 0F,
-      genre = null,
-      narrator = null,
-      series = null,
-      part = null,
+      metadata = BookMetadata(
+        name = name,
+        author = author,
+        album = null,
+        title = null,
+        genre = genre,
+        narrator = narrator,
+        series = series,
+        part = null,
+        cover = null,
+        fileLastModified = null,
+      ),
+      customName = null,
+      customCover = null,
     ),
     chapters = chapters,
   )

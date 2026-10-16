@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import voice.core.common.DispatcherProvider
 import voice.core.common.MainScope
+import voice.core.data.ListeningEvent
 import voice.core.data.sleeptimer.SleepTimerPreference
 import voice.core.data.store.FadeOutStore
 import voice.core.data.store.SleepTimerPreferenceStore
@@ -54,12 +55,10 @@ class SleepTimerImpl internal constructor(
       when (mode) {
         is SleepTimerMode.TimedWithDuration -> startCountdown(mode.duration)
         SleepTimerMode.TimedWithDefault -> {
-          val pref = sleepTimerPreferenceStore.data.first()
-          startCountdown(pref.duration)
+          // the default duration is only used when the sleep timer turns on by itself
+          startCountdown(sleepTimerPreferenceStore.data.first().duration)
         }
-        SleepTimerMode.EndOfChapter -> {
-          state.value = SleepTimerState.Enabled.WithEndOfChapter
-        }
+        SleepTimerMode.EndOfChapter -> state.value = SleepTimerState.Enabled.WithEndOfChapter
       }
     }
   }
@@ -94,19 +93,20 @@ class SleepTimerImpl internal constructor(
     playerController.setVolume(1f)
     state.value = SleepTimerState.Disabled
 
+    playerController.record(ListeningEvent.Type.SleepTimerEnded, ListeningEvent.Source.SleepTimer)
     playerController.pauseWithRewind(fadeOutDuration)
 
     val shakeDetected = detectShakeWithTimeout()
     playerController.setVolume(1F)
     if (shakeDetected) {
       Logger.i("Shake detected, resetting timer")
-      playerController.play()
+      playerController.record(ListeningEvent.Type.SleepTimerExtended, ListeningEvent.Source.SleepTimer)
+      playerController.play(source = null)
       startCountdown(duration)
     }
   }
 
   private suspend fun detectShakeWithTimeout(): Boolean {
-    Logger.d("Waiting $SHAKE_TO_RESET_TIME for shake...")
     return withTimeoutOrNull(SHAKE_TO_RESET_TIME) {
       shakeDetector.detect()
       true
@@ -124,9 +124,7 @@ class SleepTimerImpl internal constructor(
 
   private suspend fun suspendUntilPlaying() {
     if (playStateManager.playState != Playing) {
-      Logger.i("Not playing. Waiting for playback to continue.")
       playStateManager.playStateFlow.first { it == Playing }
-      Logger.i("Playback resumed.")
     }
   }
 

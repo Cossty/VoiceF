@@ -2,6 +2,7 @@
 
 import com.android.build.api.dsl.ManagedVirtualDevice
 import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
+import java.util.Properties
 
 plugins {
   id("voice.app")
@@ -13,7 +14,6 @@ plugins {
 }
 
 val playGoogleServicesJson = layout.projectDirectory.file("src/play/google-services.json")
-
 if (playGoogleServicesJson.asFile.canRead()) {
   pluginManager.apply(libs.plugins.googleServices.get().pluginId)
   pluginManager.apply(libs.plugins.crashlytics.get().pluginId)
@@ -32,7 +32,7 @@ android {
   defaultConfig {
     applicationId = "de.ph1b.audiobook"
     versionName = providers.gradleProperty("voice.versionName").orNull ?: "1.0.0"
-    versionCode = providers.gradleProperty("voice.versionCode").orNull?.toInt() ?: 1
+    versionCode = providers.gradleProperty("voice.versionCode").orNull?.toInt() ?: Int.MAX_VALUE
 
     testInstrumentationRunner = "voice.app.VoiceJUnitRunner"
   }
@@ -43,6 +43,7 @@ android {
     register("free") {
       dimension = distributionFlavor
       buildConfigField(type = "Boolean", name = "INCLUDE_ANALYTICS", value = "false")
+      buildConfigField(type = "Boolean", name = "SUPPORT_DEVELOPMENT_INCLUDED", value = "true")
       pluginManager.withPlugin(libs.plugins.crashlytics.get().pluginId) {
         extensions.configure<CrashlyticsExtension>("firebaseCrashlytics") {
           mappingFileUploadEnabled = false
@@ -52,7 +53,25 @@ android {
     register("play") {
       dimension = distributionFlavor
       buildConfigField(type = "Boolean", name = "INCLUDE_ANALYTICS", value = "true")
+      buildConfigField(type = "Boolean", name = "SUPPORT_DEVELOPMENT_INCLUDED", value = "false")
     }
+  }
+
+  val signingDir = mainCheckoutDir(layout.projectDirectory.dir("..").asFile).resolve("signing")
+  val signingPropertiesFile = signingDir.resolve("signing.properties")
+  val signingKeystoreFile = signingDir.resolve("signing.keystore")
+  val appSigningConfig = if (signingPropertiesFile.isFile) {
+    val signingProperties = Properties().apply {
+      signingPropertiesFile.inputStream().use(::load)
+    }
+    signingConfigs.create("signing") {
+      storeFile = signingKeystoreFile
+      storePassword = signingProperties.getProperty("STORE_PASSWORD")
+      keyAlias = signingProperties.getProperty("KEY_ALIAS")
+      keyPassword = signingProperties.getProperty("KEY_PASSWORD")
+    }
+  } else {
+    null
   }
 
   buildTypes {
@@ -64,6 +83,9 @@ android {
       isMinifyEnabled = false
     }
     all {
+      if (appSigningConfig != null) {
+        signingConfig = appSigningConfig
+      }
       setProguardFiles(
         listOf(
           getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -107,7 +129,7 @@ android {
   }
 }
 
-val validatePlayGoogleServices by tasks.registering {
+val validatePlayGoogleServices = tasks.register("validatePlayGoogleServices") {
   val playGoogleServicesJsonPath = playGoogleServicesJson.asFile.absolutePath
 
   doLast {
@@ -146,7 +168,6 @@ dependencies {
   implementation(projects.navigation)
   implementation(projects.core.sleeptimer.api)
   implementation(projects.core.sleeptimer.impl)
-  implementation(projects.features.sleepTimer)
   implementation(projects.features.settings)
   implementation(projects.features.folderPicker)
   implementation(projects.features.bookOverview)
@@ -156,8 +177,12 @@ dependencies {
   implementation(projects.features.onboarding)
   implementation(projects.features.bookmark)
   implementation(projects.features.widget)
+  implementation(projects.core.audiobookshelf)
+  implementation(projects.core.foldersync)
+  implementation(projects.features.audiobookshelf)
 
   implementation(libs.appCompat)
+  implementation(libs.lifecycle.compose)
   implementation(libs.datastore)
 
   implementation(libs.navigation3.ui)
@@ -170,7 +195,9 @@ dependencies {
   add("playImplementation", libs.firebase.analytics)
   add("playImplementation", projects.core.logging.crashlytics)
   add("playImplementation", projects.features.review.play)
+  add("playImplementation", projects.features.support.play)
   add("freeImplementation", projects.features.review.noop)
+  add("freeImplementation", projects.features.support.free)
 
   implementation(projects.core.remoteconfig.api)
   add("playImplementation", projects.core.remoteconfig.firebase)
@@ -184,17 +211,9 @@ dependencies {
 
   implementation(libs.androidxCore)
 
-  testImplementation(libs.junit)
-  testImplementation(libs.mockk)
-
   implementation(libs.media3.exoplayer)
   implementation(libs.media3.session)
 
-  testImplementation(libs.androidX.test.runner)
-  testImplementation(libs.androidX.test.junit)
-  testImplementation(libs.androidX.test.core)
-  testImplementation(libs.robolectric)
-  testImplementation(libs.coroutines.test)
   testImplementation(kotlin("reflect"))
 
   debugImplementation(libs.compose.ui.testManifest)
@@ -204,9 +223,19 @@ dependencies {
   androidTestImplementation(libs.androidX.test.rules)
   androidTestImplementation(libs.androidX.test.junit)
   androidTestImplementation(libs.media3.testUtils.core)
-  androidTestImplementation(libs.koTest.assert)
+  androidTestImplementation(libs.kotlin.testJunit)
   androidTestImplementation(libs.androidX.test.services)
   androidTestImplementation(libs.compose.ui.testJunit)
   androidTestImplementation(libs.coroutines.test)
   androidTestUtil(libs.androidX.test.orchestrator)
+}
+
+// Git worktrees sign with the main checkout's keys, so the release key isn't copied into every worktree.
+fun mainCheckoutDir(rootDir: File): File {
+  val dotGit = rootDir.resolve(".git")
+  if (!dotGit.isFile) return rootDir
+  val gitDir = rootDir.resolve(dotGit.readText().removePrefix("gitdir:").trim())
+  val commonDirFile = gitDir.resolve("commondir")
+  if (!commonDirFile.isFile) return rootDir
+  return gitDir.resolve(commonDirFile.readText().trim()).canonicalFile.parentFile
 }

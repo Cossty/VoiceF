@@ -3,8 +3,6 @@ package voice.features.settings.developer
 import android.content.ClipData
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -23,11 +21,13 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.res.stringResource
 import androidx.navigation3.runtime.NavEntry
 import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.BindingContainer
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.IntoSet
 import dev.zacsweers.metro.Provides
 import kotlinx.coroutines.launch
 import voice.core.common.rootGraphAs
+import voice.core.ui.icons.VoiceIcons
 import voice.navigation.Destination
 import voice.navigation.NavEntryProvider
 import voice.core.strings.R as StringsR
@@ -49,7 +49,7 @@ private fun DeveloperSettings(
         navigationIcon = {
           IconButton(onClick = viewModel::close) {
             Icon(
-              imageVector = Icons.Outlined.Close,
+              imageVector = VoiceIcons.Close,
               contentDescription = stringResource(StringsR.string.common_action_close),
             )
           }
@@ -60,9 +60,6 @@ private fun DeveloperSettings(
     LazyColumn(contentPadding = contentPadding) {
       item {
         ListItem(
-          headlineContent = {
-            Text("Refresh FCM")
-          },
           trailingContent = {
             TextButton(
               onClick = {
@@ -73,7 +70,9 @@ private fun DeveloperSettings(
               },
             )
           },
-        )
+        ) {
+          Text("Refresh FCM")
+        }
       }
 
       val fcmToken = viewState.fcmToken
@@ -82,9 +81,6 @@ private fun DeveloperSettings(
           val clipboard = LocalClipboard.current
           val scope = rememberCoroutineScope()
           ListItem(
-            headlineContent = {
-              Text("FCM Token")
-            },
             trailingContent = {
               TextButton(
                 onClick = {
@@ -99,7 +95,9 @@ private fun DeveloperSettings(
                 },
               )
             },
-          )
+          ) {
+            Text("FCM Token")
+          }
         }
       }
 
@@ -134,8 +132,9 @@ interface DeveloperSettingsGraph {
   val developerSettingsViewModel: DeveloperSettingsViewModel
 }
 
+@BindingContainer
 @ContributesTo(AppScope::class)
-interface DeveloperSettingsProvider {
+object DeveloperSettingsProvider {
 
   @Provides
   @IntoSet

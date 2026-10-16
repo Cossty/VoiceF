@@ -1,24 +1,26 @@
 package voice.core.data.repo
 
-import androidx.room.RoomDatabase
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import voice.core.data.Book
 import voice.core.data.BookContent
 import voice.core.data.Bookmark
+import voice.core.data.repo.internals.AppDb
 import voice.core.data.repo.internals.dao.BookmarkDao
 import voice.core.data.repo.internals.transaction
 import voice.core.data.runForMaxSqlVariableNumber
-import voice.core.logging.api.Logger
-import java.time.Instant
+import java.time.Clock
 
 @ContributesBinding(AppScope::class)
 public class BookmarkRepoImpl
 internal constructor(
   private val dao: BookmarkDao,
-  private val appDb: RoomDatabase,
+  private val appDb: AppDb,
+  private val clock: Clock,
 ) : BookmarkRepo {
 
   override suspend fun deleteBookmark(id: Bookmark.Id) {
@@ -32,20 +34,17 @@ internal constructor(
   override suspend fun addBookmarkAtBookPosition(
     book: Book,
     title: String?,
-    setBySleepTimer: Boolean,
   ): Bookmark {
     return withContext(Dispatchers.IO) {
       val bookMark = Bookmark(
         title = title,
         time = book.content.positionInChapter,
         id = Bookmark.Id.random(),
-        addedAt = Instant.now(),
-        setBySleepTimer = setBySleepTimer,
+        addedAt = clock.instant(),
         chapterId = book.content.currentChapter,
         bookId = book.id,
       )
       addBookmark(bookMark)
-      Logger.v("Added bookmark=$bookMark")
       bookMark
     }
   }
@@ -57,5 +56,19 @@ internal constructor(
         dao.allForChapters(it)
       }
     }
+  }
+
+  override fun bookmarksFlow(book: BookContent): Flow<List<Bookmark>> {
+    return appDb.invalidationTracker.createFlow(BOOKMARK_TABLE)
+      .map { bookmarks(book) }
+  }
+
+  override fun flow(): Flow<List<Bookmark>> {
+    return appDb.invalidationTracker.createFlow(BOOKMARK_TABLE)
+      .map { dao.all() }
+  }
+
+  private companion object {
+    const val BOOKMARK_TABLE = "bookmark2"
   }
 }

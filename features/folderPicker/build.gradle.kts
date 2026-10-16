@@ -4,25 +4,18 @@ plugins {
   alias(libs.plugins.metro)
 }
 
-android {
-  androidResources {
-    enable = true
-  }
-}
-
 dependencies {
   implementation(projects.core.ui)
   implementation(projects.core.common)
   implementation(projects.core.strings)
-  implementation(projects.core.playback)
   implementation(projects.core.data.api)
   implementation(projects.core.documentfile)
+  implementation(projects.core.scanner)
   implementation(projects.navigation)
   implementation(projects.core.featureflag)
+  implementation(projects.core.audiobookshelf)
 
   implementation(libs.coil)
   implementation(libs.androidxCore)
   implementation(libs.documentFile)
-
-  testImplementation(libs.molecule)
 }

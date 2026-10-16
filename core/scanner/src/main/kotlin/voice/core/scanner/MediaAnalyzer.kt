@@ -6,9 +6,7 @@ import androidx.media3.common.C
 import androidx.media3.common.FileTypes
 import androidx.media3.common.MediaItem
 import androidx.media3.container.MdtaMetadataEntry
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.TrackGroupArray
-import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.metadata.id3.ChapterFrame
 import androidx.media3.extractor.metadata.id3.TextInformationFrame
 import androidx.media3.extractor.metadata.vorbis.VorbisComment
@@ -35,24 +33,15 @@ internal class MediaAnalyzer(
   private val matroskaExtractorFactory: MatroskaMetaDataExtractor.Factory,
 ) {
 
-  // we use a custom MediaSourceFactory because the default one for the
-  // retriever also extracts the covers
-  private val mediaSourceFactory = DefaultMediaSourceFactory(
-    context,
-    DefaultExtractorsFactory(),
-  )
-
   suspend fun analyze(file: CachedDocumentFile): Metadata? {
     val builder = Metadata.Builder(file.nameWithoutExtension())
-    val duration = retrieveDuration(file.uri)
+    val (duration, trackGroups) = retrieveDurationAndTrackGroups(file.uri)
       ?: return null
+    val extension = (file.name ?: "").substringAfterLast(delimiter = ".", missingDelimiterValue = "").lowercase()
     if (duration <= Duration.ZERO) {
-      Logger.w("Duration is zero or negative for file: ${file.uri}")
+      Logger.w("Duration is zero or negative for a .$extension file")
       return null
     }
-
-    val trackGroups = retrieveMetadata(file.uri)
-      ?: return null
 
     repeat(trackGroups.length) { trackGroupsIndex ->
       val trackGroup = trackGroups[trackGroupsIndex]
@@ -66,7 +55,6 @@ internal class MediaAnalyzer(
                 is ChapterFrame -> visitChapter(entry, builder)
                 is VorbisComment -> visitVorbis(entry, builder)
                 is MdtaMetadataEntry -> visitMdta(entry, builder)
-                else -> Logger.d("Unknown metadata entry: $entry")
               }
             }
           }
@@ -75,7 +63,6 @@ internal class MediaAnalyzer(
     }
 
     val fileType = FileTypes.inferFileTypeFromUri(file.uri)
-    val extension = (file.name ?: "").substringAfterLast(delimiter = ".", missingDelimiterValue = "").lowercase()
     if (fileType == FileTypes.MP4 || extension == "mp4" || extension == "m4a" || extension == "m4b") {
       parseMp4Chapters(file, builder)
     }
@@ -156,7 +143,6 @@ internal class MediaAnalyzer(
           }
         }
       }
-      else -> Logger.d("Unknown comment name: ${entry.key}, value: $value")
     }
   }
 
@@ -188,35 +174,22 @@ internal class MediaAnalyzer(
         "MVIN" -> builder.part = if (builder.part.isNullOrBlank()) value else builder.part
         "TXXX:PART" -> builder.part = value
         "TXXX:NARRATOR" -> builder.narrator = if (builder.narrator.isNullOrBlank()) value else builder.narrator
-        else -> Logger.v("Unknown TXXX frame description:  ${entry.description}, value: $value")
+        else -> Logger.v("Unknown TXXX frame description: ${entry.description}")
       }
       "TRCK", "TYER", "TSSE" -> {}
-      else -> Logger.v("Unknown frame ID: ${entry.id}, value: $value")
+      else -> Logger.v("Unknown frame ID: ${entry.id}")
     }
   }
 
-  private suspend fun retrieveMetadata(uri: Uri): TrackGroupArray? {
+  // Keep the retriever's default MediaSourceFactory: its extractor flags are tuned for metadata
+  // retrieval, e.g. skipping the MP4 sample table and estimating the duration of raw AAC files.
+  // A single retriever prepares the file once for both the duration and the track groups.
+  private suspend fun retrieveDurationAndTrackGroups(uri: Uri): Pair<Duration, TrackGroupArray>? {
     return try {
       MetadataRetriever.Builder(context, MediaItem.fromUri(uri))
-        .setMediaSourceFactory(mediaSourceFactory)
         .build()
         .use {
-          it.retrieveTrackGroups().await()
-        }
-    } catch (e: Exception) {
-      if (e is CancellationException) currentCoroutineContext().ensureActive()
-      Logger.w(e, "Error retrieving metadata")
-      null
-    }
-  }
-
-  private suspend fun retrieveDuration(uri: Uri): Duration? {
-    return try {
-      MetadataRetriever.Builder(context, MediaItem.fromUri(uri))
-        .setMediaSourceFactory(mediaSourceFactory)
-        .build()
-        .use {
-          it.retrieveDurationUs().await().microseconds
+          it.retrieveDurationUs().await().microseconds to it.retrieveTrackGroups().await()
         }
     } catch (e: Exception) {
       if (e is CancellationException) currentCoroutineContext().ensureActive()

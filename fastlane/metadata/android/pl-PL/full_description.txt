@@ -1,20 +1,54 @@
-Szukasz prostego, minimalistycznego odtwarzacza audiobooków który po prostu działa?
-Takiego który pozwala Ci się skupić na tym co faktycznie chcesz robić czyli słuchaniu audiobooka?
-Po prostu dodaj swój główny folder z audiobookami, a każdy folder wewnątrz zostanie rozpoznany jako pojedyncza książka. Dzięki temu struktura twojej biblioteki jest prosta i niezaśmiecona.
+Voice to spokojny odtwarzacz audiobooków dla tych, którzy kochają historie i słuchają własnych książek.
 
-Co potrafi:
+Wybierz folder ze swoimi audiobookami. Voice pokaże ci znalezione książki, doda je do biblioteki i w każdej zapamięta, gdzie jesteś. A potem nie wchodzi ci w drogę, więc możesz po prostu słuchać.
 
-- Zapamiętuje pozycję w książce
-- Ustawienia szybkości odtwarzania
-- Piękny Material Design
-- Motywy dzienny i nocny. Przyjemne dla oczu
-- Zakładki
-- Android Auto
-- Wyłącznik czasowy. Nie musisz specjalnie wyłączać odtwarzacza w środku nocy
+<b>Odtwarzacz, który pasuje do książki</b>
 
-Voice jest wolnym i otwartym oprogramowaniem. To oznacza, że wszyscy mogą zobaczyć w jaki sposób on działa. Wykorzystuje on minimalny zestaw uprawnień.
+• Odtwarzacz przybiera kolory okładki książki, której słuchasz
+• Voice pamięta, gdzie jesteś w każdej książce
+• Szybkość odtwarzania, pomijanie ciszy i zwiększanie głośności cichych nagrań
+• Skok za daleko? Jedno dotknięcie i wracasz
+• Automatyczne cofnięcie po pauzie, żeby nie zgubić wątku
 
-Jeśli masz jakieś sugestie, lub znajdziesz błędy, zgłoś je tutaj:
+<b>Zasypiaj przy opowieściach</b>
+
+• Wyłącznik czasowy z łagodnym wyciszaniem albo zatrzymaniem na końcu rozdziału
+• Potrząśnij telefonem tuż po upływie czasu, aby ponownie uruchomić wyłącznik czasowy
+• Spokojny nocny wygląd, gdy wyłącznik czasowy odlicza czas
+
+<b>Zawsze wiesz, gdzie jesteś</b>
+
+• Przytrzymaj przycisk zakładki, aby zapisać chwilę, a nazwę lub notatkę dodaj później
+• Oznaczaj zakładki jako ulubione, cytaty, notatki albo fragmenty do powtórki
+• Historia słuchania pokazuje każde odtworzenie, pauzę i skok, więc zawsze odnajdziesz drogę powrotną
+• Jeśli książkę włączył samochód, słuchawki albo zegarek, Voice zaproponuje powrót do poprzedniego miejsca
+
+<b>Biblioteka po twojemu</b>
+
+• Słuchaj dalej od razu na górze biblioteki
+• Książki podzielone na aktualne, nierozpoczęte i ukończone
+• Wyszukiwanie po tytule i autorze
+• Widok listy i siatki
+• Okładki z pliku, z telefonu lub z wyszukiwania w internecie
+• Widżety na ekranie głównym: Teraz odtwarzane i Półka
+• Powiadomienie z odtwarzaczem i Android Auto
+• Jasny i ciemny motyw, kolor dynamiczny i schematy kolorów – Voice na twoją modłę
+• Dostępny w 32 językach
+
+<b>Twoje własne pliki</b>
+
+Voice odtwarza audiobooki bez DRM, na przykład w formatach M4B, MP3, M4A, OGG, OGA i OPUS. Trzymaj książki w folderach tak, jak lubisz. Folder może zawierać jedną książkę albo całą bibliotekę, a Voice sam wszystko uporządkuje.
+
+<b>Tylko ty i twoje historie</b>
+
+• Bez konta
+• Bez reklam
+• Bez płatnych funkcji
+• Twoje książki zostają na twoim urządzeniu
+
+Jeśli lubisz Voice, możesz go wesprzeć w ustawieniach. To podziękowanie, które niczego nie odblokowuje.
+
+Voice to oprogramowanie open source na licencji GNU GPLv3.
+
+Opinie i zgłoszenia błędów:
 https://github.com/PaulWoitaschek/Voice/issues
-
-Wykorzystana licencja open source to GNU GPLv3

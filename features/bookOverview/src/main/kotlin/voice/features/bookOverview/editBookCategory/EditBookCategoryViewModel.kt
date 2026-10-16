@@ -1,36 +1,36 @@
 package voice.features.bookOverview.editBookCategory
 
+import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.flow.first
 import voice.core.data.BookId
 import voice.core.data.repo.BookRepository
+import voice.core.data.store.CurrentBookStore
+import voice.core.data.store.LastPlaybackSpeedStore
+import voice.core.playback.PlayerController
+import voice.core.playback.withDefaultSpeed
 import voice.features.bookOverview.bottomSheet.BottomSheetItem
 import voice.features.bookOverview.bottomSheet.BottomSheetItemViewModel
-import voice.features.bookOverview.di.BookOverviewScope
+import voice.features.bookOverview.di.BookActionsScope
 import voice.features.bookOverview.overview.BookOverviewCategory
 import voice.features.bookOverview.overview.category
+import java.time.Instant
+import kotlin.time.Duration
 
-@SingleIn(BookOverviewScope::class)
-@ContributesIntoSet(BookOverviewScope::class)
-class EditBookCategoryViewModel(private val repo: BookRepository) : BottomSheetItemViewModel {
+@SingleIn(BookActionsScope::class)
+@ContributesIntoSet(BookActionsScope::class)
+class EditBookCategoryViewModel(
+  private val repo: BookRepository,
+  private val playerController: PlayerController,
+  @CurrentBookStore
+  private val currentBookStore: DataStore<BookId?>,
+  @LastPlaybackSpeedStore
+  private val lastPlaybackSpeedStore: DataStore<Float>,
+) : BottomSheetItemViewModel {
 
-  override suspend fun items(bookId: BookId): List<BottomSheetItem> {
-    val book = repo.get(bookId) ?: return emptyList()
-    return when (book.category) {
-      BookOverviewCategory.CURRENT -> listOf(
-        BottomSheetItem.BookCategoryMarkAsNotStarted,
-        BottomSheetItem.BookCategoryMarkAsCompleted,
-      )
-      BookOverviewCategory.NOT_STARTED -> listOf(
-        BottomSheetItem.BookCategoryMarkAsCurrent,
-        BottomSheetItem.BookCategoryMarkAsCompleted,
-      )
-      BookOverviewCategory.FINISHED -> listOf(
-        BottomSheetItem.BookCategoryMarkAsCurrent,
-        BottomSheetItem.BookCategoryMarkAsNotStarted,
-      )
-    }
-  }
+  // the menu shows every status in its status picker, so there are no items to list
+  override suspend fun items(bookId: BookId): List<BottomSheetItem> = emptyList()
 
   override suspend fun onItemClick(
     bookId: BookId,
@@ -52,11 +52,24 @@ class EditBookCategoryViewModel(private val repo: BookRepository) : BottomSheetI
       else -> return
     }
 
+    val speed = book.withDefaultSpeed { lastPlaybackSpeedStore.data.first() }.content.playbackSpeed
     repo.updateBook(book.id) {
       it.copy(
         currentChapter = currentChapter,
         positionInChapter = positionInChapter,
+        // newer than the place other devices wrote, so their place doesn't undo this
+        lastPlayedAt = Instant.now(),
+        playbackSpeed = speed,
       )
+    }
+    // The player keeps the position of the book it has loaded and would write it back. It seeks in its current book,
+    // so that has to be this one too.
+    if (currentBookStore.data.first() == book.id && playerController.livePlaybackState(book.id) != null) {
+      playerController.setPosition(positionInChapter, currentChapter)
+      if (item == BottomSheetItem.BookCategoryMarkAsNotStarted) {
+        // playing on would start the book right away
+        playerController.pauseWithRewind(Duration.ZERO)
+      }
     }
   }
 }

@@ -6,13 +6,12 @@ import androidx.datastore.core.DataStore
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.zacsweers.metro.Inject
-import io.kotest.matchers.longs.shouldBeGreaterThan
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import org.junit.Test
 import voice.core.common.rootGraphAs
 import voice.core.data.BookContent
 import voice.core.data.BookId
+import voice.core.data.BookMetadata
 import voice.core.data.Chapter
 import voice.core.data.ChapterId
 import voice.core.data.MarkData
@@ -27,6 +26,8 @@ import voice.core.sleeptimer.SleepTimerMode
 import voice.core.sleeptimer.SleepTimerState
 import java.io.File
 import java.time.Instant
+import kotlin.test.Test
+import kotlin.test.assertTrue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
@@ -60,20 +61,17 @@ class SleepTimerIntegrationTest {
 
     val bookId = prepareTestBook()
 
-    // speed up the tests by using shorter fade out and sleep times
     fadeOutStore.updateData { 1.seconds }
 
-    // play the book and wait for it to start
     playerController.play()
     playStateManager.playStateFlow.first { it == PlayStateManager.PlayState.Playing }
 
     sleepTimer.enable(SleepTimerMode.TimedWithDuration(3.seconds))
 
-    // wait for the sleep timer to trigger
     sleepTimer.state.first { it == SleepTimerState.Disabled }
     playStateManager.playStateFlow.first { it == PlayStateManager.PlayState.Paused }
 
-    bookContentRepo.get(bookId)!!.positionInChapter.shouldBeGreaterThan(0)
+    assertTrue(bookContentRepo.get(bookId)!!.positionInChapter > 0)
   }
 
   @Test
@@ -82,20 +80,16 @@ class SleepTimerIntegrationTest {
 
     val bookId = prepareTestBook()
 
-    // speed up the tests by using shorter fade out and sleep times
     fadeOutStore.updateData { 1.seconds }
 
-    // play the book and wait for it to start
     playerController.play()
     playStateManager.playStateFlow.first { it == PlayStateManager.PlayState.Playing }
 
     sleepTimer.enable(SleepTimerMode.EndOfChapter)
 
-    // wait for the sleep timer to trigger
     playStateManager.playStateFlow.first { it == PlayStateManager.PlayState.Paused }
     sleepTimer.state.first { it == SleepTimerState.Disabled }
 
-    // suspend until the position is updated to the end of the chapter
     bookContentRepo.flow(bookId)
       .first { it!!.positionInChapter == 1000L }
   }
@@ -124,18 +118,25 @@ class SleepTimerIntegrationTest {
       skipSilence = false,
       isActive = true,
       lastPlayedAt = Instant.now(),
-      author = "Test Author",
-      name = "Test Audio Book",
       addedAt = Instant.now(),
       chapters = listOf(chapterId),
       currentChapter = chapterId,
       positionInChapter = 0L,
-      cover = null,
       gain = 0f,
-      genre = null,
-      narrator = null,
-      series = null,
-      part = null,
+      metadata = BookMetadata(
+        name = "Test Audio Book",
+        author = "Test Author",
+        album = null,
+        title = null,
+        genre = null,
+        narrator = null,
+        series = null,
+        part = null,
+        cover = null,
+        fileLastModified = null,
+      ),
+      customName = null,
+      customCover = null,
     )
 
     bookContentRepo.put(bookContent)

@@ -12,7 +12,6 @@ import voice.core.data.repo.internals.getLong
 import voice.core.data.repo.internals.getString
 import voice.core.data.repo.internals.mapRows
 import voice.core.data.repo.internals.transaction
-import voice.core.logging.api.Logger
 
 private const val BOOKMARK_TABLE_NAME = "tableBookmarks"
 private const val BM_PATH = "bookmarkPath"
@@ -38,24 +37,18 @@ public class Migration32to34 : Migration(32, 34) {
 
   @SuppressLint("Recycle")
   override fun migrate(db: SupportSQLiteDatabase) {
-    // retrieve old bookmarks
-    val cursor = db.query("SELECT * FROM BOOKMARK_TABLE_NAME")
+    val cursor = db.query("SELECT * FROM $BOOKMARK_TABLE_NAME")
     val entries = cursor.mapRows {
       val path = getString(BM_PATH)
       val title = getString(BM_TITLE)
       val time = getLong(BM_TIME)
       Holder(path, title, time)
     }
-    Logger.i("Restored bookmarks=$entries")
 
-    // delete table
     db.execSQL("DROP TABLE $BOOKMARK_TABLE_NAME")
 
-    // create new bookmark scheme
     db.execSQL(CREATE_TABLE_BOOKMARKS)
-    Logger.i("Created $CREATE_TABLE_BOOKMARKS")
 
-    // add old bookmarks to new bookmark scheme
     db.transaction {
       entries.forEach {
         val cv = ContentValues().apply {
@@ -64,7 +57,6 @@ public class Migration32to34 : Migration(32, 34) {
           put(TIME, it.time)
         }
         db.insert(TABLE_NAME, SQLiteDatabase.CONFLICT_FAIL, cv)
-        Logger.i("Inserted $cv to $TABLE_NAME")
       }
     }
   }

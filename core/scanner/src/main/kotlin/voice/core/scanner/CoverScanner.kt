@@ -6,6 +6,7 @@ import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import voice.core.data.Book
+import voice.core.data.isRemote
 import voice.core.data.toUri
 import voice.core.logging.api.Logger
 import java.io.IOException
@@ -18,7 +19,8 @@ internal class CoverScanner(
 ) {
 
   suspend fun scan(books: List<Book>) {
-    books.forEach { findCoverForBook(it) }
+    // server books bring their covers along
+    books.filterNot { it.id.isRemote }.forEach { findCoverForBook(it) }
   }
 
   private suspend fun findCoverForBook(book: Book) {
@@ -57,15 +59,15 @@ internal class CoverScanner(
           }
           true
         } catch (e: IOException) {
-          Logger.w(e, "Error while copying the cover from ${child.uri}")
+          Logger.w(e, "Can't copy a cover image")
           false
         } catch (e: IllegalStateException) {
           // On some Samsung Devices, openInputStream throws this exception, though it should not.
-          Logger.w(e, "Error while copying the cover from ${child.uri}")
+          Logger.w(e, "Can't copy a cover image")
           false
         }
         if (worked) {
-          coverSaver.setBookCover(coverFile, book.id)
+          coverSaver.setCoverFromFiles(coverFile, book.id)
           return@withContext true
         }
       }
@@ -83,7 +85,7 @@ internal class CoverScanner(
           outputFile = coverFile,
         )
         if (success && coverFile.exists() && coverFile.length() > 0) {
-          coverSaver.setBookCover(coverFile, bookId = book.id)
+          coverSaver.setCoverFromFiles(coverFile, bookId = book.id)
           return
         }
       }

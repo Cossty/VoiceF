@@ -1,44 +1,56 @@
 package voice.features.settings
 
+import voice.core.data.ThemeColorScheme
+import voice.core.data.ThemeMode
+import voice.core.data.supporter.SupporterBadge
 import java.time.LocalTime
+import java.time.YearMonth
 
 data class SettingsViewState(
-  val useDarkTheme: Boolean,
-  val showDarkThemePref: Boolean,
+  val themeMode: ThemeMode,
+  val themeColorScheme: ThemeColorScheme,
+  val pureBlack: Boolean,
+  val dynamicColorAvailable: Boolean,
   val seekTimeInSeconds: Int,
   val autoRewindInSeconds: Int,
+  val lockScreenSlider: Boolean,
   val appVersion: String,
-  val dialog: Dialog?,
   val useGrid: Boolean,
   val autoSleepTimer: AutoSleepTimerViewState,
   val showAnalyticSetting: Boolean,
   val analyticsEnabled: Boolean,
-  val showFolderPickerEntry: Boolean,
   val showDeveloperMenu: Boolean,
-  val kioskMode: Boolean,
+  val showSupportDevelopment: Boolean,
+  val supporterBadge: SupporterBadge?,
+  val supporterSince: YearMonth?,
+  val folderNames: List<String>,
+  /** The connected Audiobookshelf server, or null without one. */
+  val audiobookshelfServer: String?,
+  val showAudiobookshelf: Boolean,
 ) {
-
-  enum class Dialog {
-    AutoRewindAmount,
-    SeekTime,
-  }
 
   companion object {
     fun preview(): SettingsViewState {
       return SettingsViewState(
-        useDarkTheme = false,
-        showDarkThemePref = true,
-        seekTimeInSeconds = 42,
-        autoRewindInSeconds = 12,
-        dialog = null,
+        themeMode = ThemeMode.FollowSystem,
+        themeColorScheme = ThemeColorScheme.VoiceBlue,
+        pureBlack = false,
+        dynamicColorAvailable = true,
+        seekTimeInSeconds = 20,
+        autoRewindInSeconds = 2,
+        lockScreenSlider = true,
         appVersion = "1.2.3",
         useGrid = true,
         autoSleepTimer = AutoSleepTimerViewState.preview(),
         analyticsEnabled = false,
         showAnalyticSetting = true,
-        showFolderPickerEntry = false,
         showDeveloperMenu = true,
-        kioskMode = false,
+        showSupportDevelopment = true,
+        supporterBadge = null,
+        supporterSince = null,
+        folderNames = listOf("Audiobooks", "Sci-Fi", "Non-Fiction"),
+        audiobookshelfServer = "audiobooks.example.com",
+        showAudiobookshelf = true,
       )
     }
   }

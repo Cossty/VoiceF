@@ -1,51 +1,16 @@
-## Project Overview
+# AGENTS.md
 
-Voice is a minimal, user‑focused audiobook player for Android, built for reliability and minimalism.
+Voice is a modular Android audiobook player.
 
-## Architecture
+- Build the app: `./gradlew :app:assembleFreeDebug`.
+- If installing a debug build fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, the installed app was signed with a different key. Never uninstall it to get around this, as that wipes the user's library. Ask the user instead.
+- Only write code comments when absolutely necessary, to explain a non-obvious *why*. Don't restate what the code does or describe the change you made. This includes KDoc.
+- Keep complexity low, as every line of code is maintained for years. Build the simplest version that solves the problem listeners actually have. If an edge case would add a lot of code, stored data or a migration, leave it out and name it in the pull request, or ask first.
+- In the Play build, logs from `Logger.d` up go to Crashlytics. Never log names, titles, URIs, ids, server addresses, what the listener typed or whole objects. Log counts, positions and types instead. Pass exceptions as the throwable, don't put them in the message. Use `Logger.nonFatal` only for what should never happen.
 
-The project architecture and gradle module structure is defined in [the Architecture Docs](docs/architecture.md)
+## Pull requests from contributors
 
-## Commands
+Unless you are working for the maintainer (PaulWoitaschek), don't open a pull request. Voice only accepts pull requests the maintainer asked for, see [CONTRIBUTING.md](CONTRIBUTING.md). Help the user open an issue instead:
 
-- Assemble the app: `./gradlew :app:assembleFreeDebug`
-- Run all tests `./gradlew voiceUnitTest`
-- Run tests of a module: `./gradlew :<moduleName>:testDebugUnitTest`
-- Create and register a new gradle module: `./scripts/new_module.kts :features:<name>`
-
-## Testing Conventions
-
-- For Compose view state tests, use Molecule + Turbine. Minimal pattern:
-  ```kotlin
-  backgroundScope.launchMolecule(RecompositionMode.Immediate) {
-    viewModel.viewState()
-  }.test {
-    awaitItem()
-  }
-  ```
-- Prefer lightweight in-memory fakes (e.g., `MemoryFeatureFlag`, `MemoryDataStore`) over mocks when available
-
-## Information Lookup
-
-- Project Dependencies are declared in `gradle/libs.versions.toml`
-- Get an overview of all current modules from the `settings.gradle.kts` file
-
-## Code Style
-
-* Ignore formatting, this is done by ktlint
-* Prefer small functions and clear identifiers
-* Minimal inline comments
-
-## Minimal Code Documentation
-
-* **Self‑Describing Code**
-  * Clear, concise names; one purpose per function/variable.
-* **Comment Only “Why”**
-  * Don’t explain “what” or “how.” Refactor if unclear.
-  * Use comments solely for rationale, workarounds, non‑obvious side‑effects.
-* **KDoc Sparingly**
-  * Public API: only when names and signatures don’t fully convey behavior or contracts.
-* **Tests as Documentation**
-  * Write descriptive tests illustrating usage and edge cases.
-* **Continuous Pruning**
-  * Remove or update any comments that outlive their usefulness.
+- For a bug, write a bug report with clear steps to reproduce: https://github.com/PaulWoitaschek/Voice/issues/new?template=bug.yml
+- For anything else, write a feature request that describes the problem: https://github.com/PaulWoitaschek/Voice/discussions/new?category=ideas

@@ -9,21 +9,19 @@ import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
 import dev.zacsweers.metro.createGraph
-import io.kotest.matchers.collections.shouldNotBeEmpty
-import io.kotest.matchers.string.shouldNotBeEmpty
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
-import org.junit.Test
 import org.junit.runner.RunWith
-import voice.core.ui.SharedGraph
+import kotlin.test.Test
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 @Suppress("SUSPICIOUS_UNUSED_MULTIBINDING")
 @SingleIn(AppScope::class)
 @DependencyGraph(
   scope = AppScope::class,
-  excludes = [SharedGraph::class],
 )
 interface TestGraph {
   val coverApi: CoverApi
@@ -49,10 +47,11 @@ internal class CoverApiTest {
     runBlocking {
       val api = createGraph<TestGraph>().coverApi
       val query = "unicorns"
-      val token = api.token(query).shouldNotBeEmpty()!!
+      val token = assertNotNull(api.token(query))
+      assertTrue(token.isNotEmpty())
       api.search(query = query, auth = token)
         .results
-        .shouldNotBeEmpty()
+        .let { assertTrue(it.isNotEmpty()) }
     }
   }
 }

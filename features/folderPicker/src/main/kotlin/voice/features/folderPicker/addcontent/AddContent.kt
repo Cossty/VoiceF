@@ -2,14 +2,13 @@ package voice.features.folderPicker.addcontent
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.retain.retain
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation3.runtime.NavEntry
 import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.BindingContainer
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.IntoSet
 import dev.zacsweers.metro.Provides
 import voice.core.common.rootGraphAs
-import voice.core.ui.VoiceTheme
 import voice.navigation.Destination
 import voice.navigation.NavEntryProvider
 import voice.navigation.Origin
@@ -19,8 +18,9 @@ interface AddContentGraph {
   val viewModelFactory: AddContentViewModel.Factory
 }
 
+@BindingContainer
 @ContributesTo(AppScope::class)
-interface AddContentProvider {
+object AddContentProvider {
 
   @Provides
   @IntoSet
@@ -44,13 +44,6 @@ fun AddContent(origin: Origin) {
     onAdd = { folderType, uri ->
       viewModel.add(uri, folderType)
     },
+    onConnectAudiobookshelf = if (viewModel.canConnectAudiobookshelf) viewModel::connectAudiobookshelf else null,
   )
-}
-
-@Composable
-@Preview
-private fun AddContentPreview() {
-  VoiceTheme {
-    AddContent(Origin.Default)
-  }
 }

@@ -9,15 +9,15 @@ dependencies {
   implementation(projects.core.common)
   implementation(projects.core.strings)
   implementation(projects.core.playback)
+  implementation(projects.core.audiobookshelf)
   implementation(projects.core.data.api)
   implementation(projects.core.featureflag)
   implementation(projects.core.ui)
   implementation(projects.core.sleeptimer.api)
-  implementation(projects.features.sleepTimer)
 
   implementation(libs.coil)
   implementation(libs.androidxCore)
+  implementation(libs.navigation3.ui)
 
-  testImplementation(libs.molecule)
-  testImplementation(libs.turbine)
+  testImplementation(libs.compose.ui.testJunit)
 }

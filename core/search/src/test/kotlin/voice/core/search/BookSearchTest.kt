@@ -3,9 +3,7 @@ package voice.core.search
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import io.kotest.matchers.collections.shouldContainExactly
 import kotlinx.coroutines.test.runTest
-import org.junit.Test
 import org.junit.runner.RunWith
 import voice.core.data.Book
 import voice.core.data.BookId
@@ -13,6 +11,9 @@ import voice.core.data.repo.BookContentRepoImpl
 import voice.core.data.repo.BookRepositoryImpl
 import voice.core.data.repo.ChapterRepoImpl
 import voice.core.data.repo.internals.AppDb
+import java.time.Instant
+import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.uuid.Uuid
 
 @RunWith(AndroidJUnit4::class)
@@ -95,12 +96,12 @@ class BookSearchTest {
 
   @Test
   fun `multiple matches on author`() = test {
-    expectSearchResult("Jimi", watchtower, unicorns)
+    expectSearchResult("Jimi", unicorns, watchtower)
   }
 
   @Test
   fun `multiple matches on title`() = test {
-    expectSearchResult("along", watchtower, unicorns)
+    expectSearchResult("along", unicorns, watchtower)
   }
 
   @Test
@@ -125,15 +126,117 @@ class BookSearchTest {
     expectSearchResult("kingkiller", kingkiller1, kingkiller25)
   }
 
-  private fun test(run: suspend TestBase.() -> Unit) {
+  @Test
+  fun `empty query finds nothing`() = test {
+    expectSearchResult("")
+    expectSearchResult("  ")
+    expectSearchResult("**")
+  }
+
+  @Test
+  fun `whole words beat word starts and titles beat authors`() {
+    val wayOfKings = book(name = "The Way of Kings", author = "Brandon Sanderson")
+    val fairyTale = book(name = "Fairy Tale", author = "Stephen King")
+    val elfland = book(name = "The King of Elfland's Daughter", author = "Lord Dunsany")
+    test(wayOfKings, fairyTale, elfland) {
+      expectSearchResult("king", elfland, fairyTale, wayOfKings)
+    }
+  }
+
+  @Test
+  fun `books in progress and recently played come first`() {
+    val notStarted = book(name = "Dune", time = 0)
+    val playedLongAgo = book(name = "Dune Messiah", lastPlayedAt = Instant.ofEpochSecond(1))
+    val playedRecently = book(name = "Children of Dune", lastPlayedAt = Instant.ofEpochSecond(2))
+    test(notStarted, playedLongAgo, playedRecently) {
+      expectSearchResult("dune", playedRecently, playedLongAgo, notStarted)
+    }
+  }
+
+  @Test
+  fun `matches of neighboring words are joined`() {
+    val book = book(name = "The Way of Kings", author = "Brandon Sanderson")
+    test(book) {
+      assertEquals(
+        expected = mapOf(BookSearchField.Author to listOf(0..16)),
+        actual = search.search("brandon sanderson").single().matches,
+      )
+      assertEquals(
+        expected = mapOf(BookSearchField.Title to listOf(0..2, 11..15)),
+        actual = search.search("the kings").single().matches,
+      )
+    }
+  }
+
+  @Test
+  fun `matches point to the matched words`() = test {
+    val result = search.search("kingkiller 1").single()
+    assertEquals(
+      expected = mapOf(BookSearchField.Series to listOf(0..9, 21..21)),
+      actual = result.matches,
+    )
+
+    val rothfuss = search.search("rothfuss slow").single()
+    assertEquals(
+      expected = mapOf(
+        BookSearchField.Title to listOf(4..7),
+        BookSearchField.Author to listOf(8..15),
+        BookSearchField.Narrator to listOf(8..15),
+      ),
+      actual = rothfuss.matches,
+    )
+  }
+
+  @Test
+  fun `fields matching all words`() = test {
+    val kingkiller = search.search("kingkiller 1").single()
+    assertEquals(expected = setOf(BookSearchField.Series), actual = kingkiller.fieldsMatchingAllWords)
+
+    val rothfuss = search.search("rothfuss slow").single()
+    assertEquals(expected = emptySet(), actual = rothfuss.fieldsMatchingAllWords)
+
+    val fry = search.search("stephen fry").map { it.fieldsMatchingAllWords }.distinct().single()
+    assertEquals(expected = setOf(BookSearchField.Narrator), actual = fry)
+  }
+
+  @Test
+  fun `diacritics are ignored`() {
+    val cafe = book(name = "Café Society", author = "Ana Müller")
+    test(cafe) {
+      expectSearchResult("cafe", cafe)
+      expectSearchResult("CAFÉ", cafe)
+      expectSearchResult("muller", cafe)
+      assertEquals(
+        expected = mapOf(BookSearchField.Title to listOf(0..3)),
+        actual = search.search("cafe").single().matches,
+      )
+    }
+  }
+
+  private fun test(run: suspend TestBase.() -> Unit) = test(
+    commendatore,
+    watchtower,
+    unicorns,
+    harryPotter1,
+    harryPotter2,
+    kingkiller1,
+    kingkiller25,
+    run = run,
+  )
+
+  private fun test(
+    vararg books: Book,
+    run: suspend TestBase.() -> Unit,
+  ) {
     val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
       .build()
+    val contentRepo = BookContentRepoImpl(db.bookContentDao())
     val repo = BookRepositoryImpl(
       chapterRepo = ChapterRepoImpl(db.chapterDao()),
-      contentRepo = BookContentRepoImpl(db.bookContentDao()),
+      contentRepo = contentRepo,
     )
     val search = BookSearch(
-      dao = db.bookContentDao(),
+      contentRepo = contentRepo,
       repo = repo,
     )
 
@@ -147,22 +250,10 @@ class BookSearchTest {
     }
 
     runTest {
-      addBook(commendatore)
-      addBook(watchtower)
-      addBook(unicorns)
-      addBook(harryPotter1)
-      addBook(harryPotter2)
-      addBook(kingkiller1)
-      addBook(kingkiller25)
+      books.forEach { addBook(it) }
 
       // this ensures that inactive books are never accounted for
-      addBook(commendatore.withNewIdAndInactive())
-      addBook(watchtower.withNewIdAndInactive())
-      addBook(unicorns.withNewIdAndInactive())
-      addBook(harryPotter1.withNewIdAndInactive())
-      addBook(harryPotter2.withNewIdAndInactive())
-      addBook(kingkiller1.withNewIdAndInactive())
-      addBook(kingkiller25.withNewIdAndInactive())
+      books.forEach { addBook(it.withNewIdAndInactive()) }
 
       testBase.run()
       db.close()
@@ -179,14 +270,14 @@ private fun Book.withNewIdAndInactive(): Book {
   }
 }
 
-private class TestBase(private val search: BookSearch) {
+private class TestBase(val search: BookSearch) {
 
   suspend fun expectSearchResult(
     query: String,
     vararg expected: Book,
   ) {
-    val result = search.search(query)
-    result shouldContainExactly expected.toList()
+    val result = search.search(query).map { it.book }
+    assertEquals(expected = expected.toList(), actual = result)
   }
 
   suspend fun search(query: String) {

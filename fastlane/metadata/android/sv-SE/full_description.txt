@@ -1,26 +1,54 @@
-Letar du efter en ren, minimalistisk ljudboksspelare som bara fungerar? Voice är din ultimata offline-följeslagare för att lyssna på dina favoritljudböcker utan DRM-störningar. Vi anser att din lyssningsupplevelse ska vara sömlös, vilket är anledningen till att Voice är 100 % gratis, öppen källkod och innehåller absolut ingen reklam.
+Voice är en lugn ljudboksspelare för dig som älskar berättelser och har dina egna böcker.
 
-Voice är utformad för ljudboksentusiaster som hanterar sina egna lokala filer (M4B, MP3, M4A, OGG, OGA, OPUS, etc.) och låter dig fokusera på det som är viktigast: berättelsen. Lägg bara till din huvudsakliga ljudboksmapp, så känner appen automatiskt igen varje undermapp som en enda bok. Ingen komplex synkronisering, inga tvingade molnkonton – bara dina lokala filer, spelade perfekt.
+Välj mappen med dina ljudböcker. Voice visar böckerna den hittar, lägger till dem i ditt bibliotek och kommer ihåg var du är i varenda en. Sedan håller sig Voice i bakgrunden, så att du bara kan lyssna.
 
-Trots sitt rena gränssnitt har Voice kraftfulla funktioner för avancerade användare:
-• 100 % offline och reklamfritt: Njut av oavbruten lyssnande var som helst. Ingen internetanslutning krävs, inga prenumerationer och ingen reklam.
-• Avancerade ljudkontroller: Justera uppspelningshastigheten, aktivera volymökning för tysta inspelningar och använd reglaget för att hoppa över tystnad för att smidigt bläddra igenom pauser.
-• Konfigurerbar automatisk återspolning: Pausad ett tag? Appen spolar automatiskt tillbaka några sekunder när du återupptar, så att du enkelt kan se sammanhanget.
+<b>En spelare som passar din bok</b>
 
-• Smart sökning: Sök enkelt i hela ditt bibliotek efter titlar och författare för att direkt hitta exakt den bok du vill höra.
+• Spelaren tar sina färger från omslaget på boken du lyssnar på
+• Voice kommer ihåg var du är i varje bok
+• Uppspelningshastighet, hoppa över tystnad och volymförstärkning för svaga inspelningar
+• Hoppat för långt? Ett tryck tar dig tillbaka
+• Automatisk bakåtspolning efter en paus, så att du inte tappar tråden
 
-• Smarta bokmärken och positionsspårning: Appen kommer exakt ihåg din senaste uppspelningsposition för varje enskild bok. Du kan också enkelt lägga till, hantera och byta namn på anpassade bokmärken.
+<b>Somna till en berättelse</b>
 
-• Sovtimer: Ställ in en anpassad timer, spela upp till slutet av kapitlet eller definiera ett dagligt tidsfönster (t.ex. 22:00 - 06:00) för automatisk paus. Skaka enheten för att snabbt återställa timern utan att låsa upp skärmen!
+• Insomningstimer som tonar ut mjukt, eller stopp vid kapitlets slut
+• Skaka telefonen direkt efter att timern har gått ut för att starta om den
+• Ett lugnt nattläge medan timern går
 
-• Hantering av omslagsbilder: Använd inbäddad omslagsbild, välj lokala bilder eller låt appen söka online efter saknade omslag.
+<b>Tappa aldrig bort var du var</b>
 
-• Systemintegration: Styr uppspelningen direkt via startskärmswidgeten, medieaviseringar eller säkert från bilens instrumentpanel med fullt stöd för Android Auto.
+• Håll in för att spara ett ögonblick och lägg till ett namn eller en anteckning senare
+• Markera bokmärken som favoriter, citat, anteckningar eller ställen att lyssna på igen
+• Lyssningshistoriken visar varje uppspelning, paus och hopp, så att du alltid hittar tillbaka
+• Om bilen, hörlurarna eller klockan startade en bok erbjuder Voice att ta dig tillbaka
 
-• Mappbaserat bibliotek: Filtrera böcker efter "Aktuell", "Slutförd" och "Inte startad". Växla enkelt mellan listor och rutnät.
+<b>Ditt bibliotek, ditt sätt</b>
 
-Voice är en helt gratis programvara med öppen källkod (GNU GPLv3-licens). Det betyder att communityn kan se exakt vad den gör. Vi respekterar din integritet och använder endast de minimala Android-behörigheter som krävs för att läsa dina lokala ljudfiler.
+• Fortsätt lyssna direkt högst upp i biblioteket
+• Böcker sorterade i pågående, inte påbörjade och färdiglyssnade
+• Sök efter titel och författare
+• List- och rutnätsvy
+• Omslag från filen, telefonen eller en sökning på nätet
+• Widgetar för startskärmen: ”Spelas nu” och ”Bokhylla”
+• Medieavisering och Android Auto
+• Ljust och mörkt tema, Dynamisk färg och färgscheman som gör Voice till ditt eget
+• Finns på 32 språk
 
-Förvandla din Android-enhet till den perfekta ljudfristaden offline idag!
+<b>Ta med dina egna filer</b>
 
-Återkoppling eller fel? Gå med i vår gemenskap och rapportera dem på vår GitHub-sida: https://github.com/PaulWoitaschek/Voice/issues
+Voice spelar DRM-fria ljudböcker som M4B, MP3, M4A, OGG, OGA och OPUS. Förvara dina böcker i mappar precis som du vill. En mapp kan innehålla en enda bok eller hela ditt bibliotek, och Voice ordnar det åt dig.
+
+<b>Bara du och dina berättelser</b>
+
+• Inget konto
+• Ingen reklam
+• Inget bakom betalvägg
+• Dina böcker stannar på din enhet
+
+Om du gillar Voice kan du stötta appen i inställningarna. Det är ett tack och låser inte upp något.
+
+Voice är öppen källkod under GNU GPLv3-licensen.
+
+Feedback och felrapporter:
+https://github.com/PaulWoitaschek/Voice/issues

@@ -3,8 +3,11 @@ package voice.core.data.store
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
+import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.BindingContainer
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
@@ -13,13 +16,19 @@ import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.builtins.serializer
 import voice.core.data.BookId
 import voice.core.data.GridMode
+import voice.core.data.ReviewPromptState
+import voice.core.data.ThemeColorScheme
+import voice.core.data.ThemeMode
 import voice.core.data.sleeptimer.SleepTimerPreference
+import voice.core.data.supporter.SupporterStatus
 import voice.core.featureflag.FeatureFlagOverride
+import java.io.File
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
+@BindingContainer
 @ContributesTo(AppScope::class)
-public interface StoreModule {
+public object StoreModule {
 
   @Provides
   @SingleIn(AppScope::class)
@@ -32,18 +41,38 @@ public interface StoreModule {
 
   @Provides
   @SingleIn(AppScope::class)
-  @DarkThemeStore
-  private fun darkTheme(
+  @ThemeModeStore
+  private fun themeMode(
     factory: VoiceDataStoreFactory,
+    application: Application,
     sharedPreferences: SharedPreferences,
-  ): DataStore<Boolean> {
-    return factory.boolean(
-      fileName = "darkTheme",
-      defaultValue = false,
+  ): DataStore<ThemeMode> {
+    return factory.create(
+      serializer = ThemeMode.serializer(),
+      fileName = "themeMode",
+      defaultValue = ThemeMode.FollowSystem,
       migrations = listOf(
-        booleanPrefsDataMigration(sharedPreferences, "darkTheme"),
+        LegacyDarkThemeMigration(application, sharedPreferences),
       ),
     )
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @ThemeColorSchemeStore
+  private fun themeColorScheme(factory: VoiceDataStoreFactory): DataStore<ThemeColorScheme> {
+    return factory.create(
+      serializer = ThemeColorScheme.serializer(),
+      fileName = "themeColorScheme",
+      defaultValue = ThemeColorScheme.VoiceBlue,
+    )
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @PureBlackStore
+  private fun pureBlack(factory: VoiceDataStoreFactory): DataStore<Boolean> {
+    return factory.boolean("pureBlack", defaultValue = false)
   }
 
   @Provides
@@ -150,9 +179,24 @@ public interface StoreModule {
 
   @Provides
   @SingleIn(AppScope::class)
-  @ReviewDialogShownStore
-  private fun reviewDialogShown(factory: VoiceDataStoreFactory): DataStore<Boolean> {
-    return factory.create(Boolean.serializer(), false, "reviewDialogShown")
+  @ReviewPromptStateStore
+  private fun reviewPromptState(
+    factory: VoiceDataStoreFactory,
+    application: Application,
+  ): DataStore<ReviewPromptState> {
+    return factory.create(
+      serializer = ReviewPromptState.serializer(),
+      defaultValue = ReviewPromptState(),
+      fileName = "reviewPromptState",
+      migrations = listOf(ReviewDialogShownMigration(application)),
+    )
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @FolderPickerMovedDialogShownStore
+  private fun folderPickerMovedDialogShown(factory: VoiceDataStoreFactory): DataStore<Boolean> {
+    return factory.boolean("folderPickerMovedDialogShow2n", defaultValue = false)
   }
 
   @Provides
@@ -160,6 +204,13 @@ public interface StoreModule {
   @AnalyticsConsentStore
   private fun analyticsConsent(factory: VoiceDataStoreFactory): DataStore<Boolean> {
     return factory.boolean("analyticsConsent", defaultValue = false)
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @LockScreenSliderStore
+  private fun lockScreenSlider(factory: VoiceDataStoreFactory): DataStore<Boolean> {
+    return factory.boolean("lockScreenSlider", defaultValue = true)
   }
 
   @Provides
@@ -178,5 +229,96 @@ public interface StoreModule {
       defaultValue = emptyMap(),
       fileName = "featureFlagOverrides",
     )
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @CoverSeedColorsStore
+  private fun coverSeedColors(factory: VoiceDataStoreFactory): DataStore<Map<String, Int>> {
+    return factory.create(
+      serializer = MapSerializer(String.serializer(), Int.serializer()),
+      defaultValue = emptyMap(),
+      fileName = "coverSeedColors",
+    )
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @SupporterStatusStore
+  private fun supporterStatus(factory: VoiceDataStoreFactory): DataStore<SupporterStatus> {
+    return factory.create(
+      serializer = SupporterStatus.serializer(),
+      defaultValue = SupporterStatus(),
+      fileName = "supporterStatus",
+    )
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @HistoryTabOpenStore
+  private fun historyTabOpen(factory: VoiceDataStoreFactory): DataStore<Boolean> {
+    return factory.boolean("historyTabOpen", defaultValue = true)
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @LastPlaybackSpeedStore
+  private fun lastPlaybackSpeed(factory: VoiceDataStoreFactory): DataStore<Float> {
+    return factory.create(
+      serializer = Float.serializer(),
+      defaultValue = 1F,
+      fileName = "lastPlaybackSpeed",
+    )
+  }
+}
+
+private class LegacyDarkThemeMigration(
+  application: Application,
+  private val sharedPreferences: SharedPreferences,
+) : DataMigration<ThemeMode> {
+
+  private val oldDataStoreFile = File(application.applicationContext.filesDir, "datastore/darkTheme")
+
+  override suspend fun cleanUp() {
+    oldDataStoreFile.delete()
+    sharedPreferences.edit {
+      remove("darkTheme")
+    }
+  }
+
+  override suspend fun migrate(currentData: ThemeMode): ThemeMode {
+    val legacyValue = when {
+      oldDataStoreFile.exists() -> oldDataStoreFile.readText().trim().toBooleanStrictOrNull()
+      sharedPreferences.contains("darkTheme") -> sharedPreferences.getBoolean("darkTheme", false)
+      else -> null
+    }
+    return when (legacyValue) {
+      true -> ThemeMode.Dark
+      false -> ThemeMode.Light
+      null -> currentData
+    }
+  }
+
+  override suspend fun shouldMigrate(currentData: ThemeMode): Boolean {
+    return oldDataStoreFile.exists() || sharedPreferences.contains("darkTheme")
+  }
+}
+
+/**
+ * The prompt used to ask once and remember that it did. Whoever saw it isn't asked again.
+ */
+private class ReviewDialogShownMigration(application: Application) : DataMigration<ReviewPromptState> {
+
+  private val oldDataStoreFile = File(application.applicationContext.filesDir, "datastore/reviewDialogShown")
+
+  override suspend fun shouldMigrate(currentData: ReviewPromptState): Boolean = oldDataStoreFile.exists()
+
+  override suspend fun migrate(currentData: ReviewPromptState): ReviewPromptState {
+    val shown = oldDataStoreFile.readText().trim().toBooleanStrictOrNull() ?: false
+    return if (shown) currentData.copy(done = true) else currentData
+  }
+
+  override suspend fun cleanUp() {
+    oldDataStoreFile.delete()
   }
 }

@@ -30,7 +30,6 @@ internal constructor(
     val newCover = newBookCoverFile()
 
     withContext(Dispatchers.IO) {
-      // scale down if bitmap is too large
       val preferredSize = 1920
       val bitmapToSave = if (max(cover.width, cover.height) > preferredSize) {
         cover.scale(preferredSize, preferredSize)
@@ -48,17 +47,20 @@ internal constructor(
               @Suppress("DEPRECATION")
               Bitmap.CompressFormat.WEBP
             }
-            else -> error("Unhandled image extension for $newCover")
+            else -> error("Unhandled image extension ${newCover.extension}")
           }
           bitmapToSave.compress(compressFormat, 70, it)
           it.flush()
         }
       } catch (e: IOException) {
-        Logger.w(e, "Error at saving image with destination=$newCover")
+        Logger.w(e, "Error at saving a cover image")
       }
     }
 
-    setBookCover(newCover, bookId)
+    repo.get(bookId)?.content?.customCover?.deleteOnIo()
+    repo.updateBook(bookId) {
+      it.copy(customCover = newCover)
+    }
   }
 
   internal suspend fun newBookCoverFile(): File {
@@ -69,19 +71,19 @@ internal constructor(
     return File(coversFolder, "${Uuid.random()}.png")
   }
 
-  internal suspend fun setBookCover(
+  internal suspend fun setCoverFromFiles(
     cover: File,
     bookId: BookId,
   ) {
-    val oldCover = repo.get(bookId)?.content?.cover
-    if (oldCover != null) {
-      withContext(Dispatchers.IO) {
-        oldCover.delete()
-      }
-    }
-
+    repo.get(bookId)?.content?.metadata?.cover?.deleteOnIo()
     repo.updateBook(bookId) {
-      it.copy(cover = cover)
+      it.copy(metadata = it.metadata.copy(cover = cover))
+    }
+  }
+
+  private suspend fun File.deleteOnIo() {
+    withContext(Dispatchers.IO) {
+      delete()
     }
   }
 }

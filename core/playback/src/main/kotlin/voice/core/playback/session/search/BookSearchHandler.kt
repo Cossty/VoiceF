@@ -18,7 +18,7 @@ class BookSearchHandler(
 ) {
 
   suspend fun handle(search: VoiceSearch): Book? {
-    Logger.i("handle $search")
+    Logger.d("Voice search (focus=${search.mediaFocus})")
     return when (search.mediaFocus) {
       MediaStore.Audio.Artists.ENTRY_CONTENT_TYPE -> searchByArtist(search)
       MediaStore.Audio.Albums.ENTRY_CONTENT_TYPE,
@@ -33,7 +33,7 @@ class BookSearchHandler(
       val foundMatch = findBook {
         val nameMatches = it.content.name.contains(search.album, ignoreCase = true)
         val artistMatches =
-          search.artist == null || it.content.author?.contains(search.artist, ignoreCase = true) == true
+          search.artist == null || it.content.metadata.author?.contains(search.artist, ignoreCase = true) == true
         nameMatches && artistMatches
       }
       if (foundMatch != null) return foundMatch
@@ -42,12 +42,11 @@ class BookSearchHandler(
     return null
   }
 
-  // Look for anything that might match the query
   private suspend fun searchUnstructured(query: String?): Book? {
     if (!query.isNullOrBlank()) {
       val foundMatch = findBook {
         val bookNameMatches = it.content.name.contains(query, ignoreCase = true)
-        val authorMatches = it.content.author?.contains(query, ignoreCase = true) == true
+        val authorMatches = it.content.metadata.author?.contains(query, ignoreCase = true) == true
         val chapterNameMatches = it.chapters.any { chapter ->
           val chapterName = chapter.name
           chapterName != null && chapterName.contains(query, ignoreCase = true)
@@ -57,16 +56,14 @@ class BookSearchHandler(
       if (foundMatch != null) return foundMatch
     }
 
-    Logger.i("continuing from search without query")
     val currentId = currentBookStore.data.first()
     return findBook { it.content.id == currentId }
   }
 
   private suspend fun searchByArtist(search: VoiceSearch): Book? {
-    Logger.i("searchByArtist")
     if (search.artist != null) {
       val foundMatch = findBook {
-        it.content.author?.contains(search.artist, ignoreCase = true) == true
+        it.content.metadata.author?.contains(search.artist, ignoreCase = true) == true
       }
       if (foundMatch != null) {
         return foundMatch
@@ -75,7 +72,6 @@ class BookSearchHandler(
     return null
   }
 
-  // Play the first book that matches to a selector. Returns if a book is being played
   private suspend inline fun findBook(selector: (Book) -> Boolean): Book? {
     return repo.all().find(selector)
   }

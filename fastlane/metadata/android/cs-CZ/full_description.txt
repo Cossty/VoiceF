@@ -1,20 +1,54 @@
-Hledáte jednoduchý, minimální přehrávač audioknih, který prostě funguje?
-Takový, který vám umožní soustředit se na to, co chcete dělat: Poslouchat audioknihy?
-Jednoduše přidáte hlavní složku audioknih a každá složka v ní bude rozpoznána jako jedna kniha. Díky tomu bude vaše knihovna jednoduchá a nepřeplněná.
+Voice je klidný přehrávač audioknih pro všechny, kdo milují příběhy a mají své vlastní knihy.
 
-Co umí:
+Vyberte složku se svými audioknihami. Voice vám ukáže knihy, které v ní najde, přidá je do knihovny a u každé si zapamatuje, kde jste skončili. Pak už vám nepřekáží, takže můžete prostě poslouchat.
 
-- Pamatuje si poslední pozici
-- Nastavit rychlost přehrávání
-- Krásný material design
-- Denní a noční téma. Příjemné pro oči
-- Záložky
-- Android Auto
-- Časovač spánku. Není třeba vypínat přehrávač uprostřed noci.
+<b>Přehrávač, který ladí s vaší knihou</b>
 
-Voice je zdarma a s otevřeným zdrojovým kódem. To znamená, že se každý může podívat, co dělá. Používá minimální oprávnění.
+• Přehrávač si bere barvy z obalu knihy, kterou právě posloucháte
+• Voice si u každé knihy pamatuje, kde jste skončili
+• Rychlost přehrávání, přeskakování ticha a zesílení hlasitosti pro tiché nahrávky
+• Přeskočili jste moc daleko? Jedním klepnutím se vrátíte zpět
+• Automatické přetočení zpět po pauze, abyste neztratili nit
 
-Pokud máte návrhy nebo najdete chyby, nahlaste je zde:
+<b>Usínejte u příběhu</b>
+
+• Časovač spánku s pozvolným ztišením nebo se zastavením na konci kapitoly
+• Zatřeste telefonem hned po skončení časovače a znovu ho spustíte
+• Klidný noční vzhled, dokud časovač běží
+
+<b>Vždy víte, kde jste skončili</b>
+
+• Uložte si okamžik dlouhým stisknutím a název nebo poznámku přidejte později
+• Označte záložky jako oblíbené, citáty, poznámky nebo místa, která si chcete poslechnout znovu
+• Historie poslechu ukazuje každé přehrání, pozastavení i skok, takže vždy najdete cestu zpět
+• Pokud knihu spustilo auto, sluchátka nebo hodinky, Voice vám nabídne návrat tam, kde jste byli
+
+<b>Knihovna podle vás</b>
+
+• Pokračujte v poslechu hned nahoře v knihovně
+• Knihy rozdělené na aktuální, nezačaté a dokončené
+• Vyhledávání podle názvu a autora
+• Zobrazení v seznamu nebo mřížce
+• Obaly ze souboru, z telefonu nebo z vyhledávání na internetu
+• Widgety na plochu: Právě hraje a Knihovnička
+• Ovládání přehrávání v oznámení a Android Auto
+• Světlý a tmavý motiv, dynamická barva a barevná schémata, abyste si Voice udělali po svém
+• K dispozici ve 32 jazycích
+
+<b>Vaše vlastní soubory</b>
+
+Voice přehrává audioknihy bez DRM, například ve formátech M4B, MP3, M4A, OGG, OGA a OPUS. Knihy si ukládejte do složek tak, jak vám to vyhovuje. Složka může obsahovat jednu knihu i celou vaši knihovnu a Voice ji za vás uspořádá.
+
+<b>Jen vy a vaše příběhy</b>
+
+• Žádný účet
+• Žádné reklamy
+• Žádné funkce za příplatek
+• Vaše knihy zůstávají ve vašem zařízení
+
+Pokud vás Voice baví, můžete ho podpořit v nastavení. Je to poděkování a nic neodemyká.
+
+Voice je software s otevřeným zdrojovým kódem pod licencí GNU GPLv3.
+
+Zpětná vazba a hlášení chyb:
 https://github.com/PaulWoitaschek/Voice/issues
-
-Licence open source je GNU GPLv3

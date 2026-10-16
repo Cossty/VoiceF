@@ -1,8 +1,28 @@
 @file:Suppress("UnstableApiUsage")
 
+import org.gradle.api.internal.FeaturePreviews
+
 rootProject.name = "voice"
 
-enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+FeaturePreviews.Feature.entries.forEach { feature ->
+  val enable = when (feature) {
+    FeaturePreviews.Feature.TYPESAFE_PROJECT_ACCESSORS,
+    FeaturePreviews.Feature.STABLE_CONFIGURATION_CACHE,
+    FeaturePreviews.Feature.NO_IMPLICIT_LOOKUP_IN_PARENT_PROJECTS,
+    FeaturePreviews.Feature.ENHANCED_GRAPH_ORDERING,
+      -> true
+    FeaturePreviews.Feature.GROOVY_COMPILATION_AVOIDANCE,
+    FeaturePreviews.Feature.INTERNAL_BUILD_SERVICE_USAGE,
+    FeaturePreviews.Feature.ALWAYS_INACTIVE,
+      -> false
+  }
+  if (enable) {
+    check(feature.isActive){
+      "Feature $feature is not active"
+    }
+    enableFeaturePreview(feature.name)
+  }
+}
 
 pluginManagement {
   repositories {
@@ -21,12 +41,12 @@ dependencyResolutionManagement {
 }
 
 plugins {
-  id("com.gradle.develocity") version "4.4.2"
+  id("com.gradle.develocity") version "4.6.0"
   id("org.gradle.toolchains.foojay-resolver-convention") version ("1.0.0")
-  id("org.jetbrains.kotlin.android") version "2.4.0" apply false
-  id("org.jetbrains.kotlin.jvm") version "2.4.0" apply false
-  id("com.android.application") version "9.2.1" apply false
-  id("com.android.library") version "9.2.1" apply false
+  id("org.jetbrains.kotlin.android") version "2.4.21" apply false
+  id("org.jetbrains.kotlin.jvm") version "2.4.21" apply false
+  id("com.android.application") version "9.4.1" apply false
+  id("com.android.library") version "9.4.1" apply false
 }
 
 develocity {
@@ -70,6 +90,12 @@ include(":features:playbackScreen")
 include(":features:review:noop")
 include(":features:review:play")
 include(":features:settings")
-include(":features:sleepTimer")
+include(":features:support:api")
+include(":features:support:free")
+include(":features:support:play")
 include(":features:widget")
 include(":core:featureflag")
+include(":core:audiobookshelf")
+include(":features:audiobookshelf")
+include(":core:snapshot")
+include(":core:foldersync")

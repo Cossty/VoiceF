@@ -52,6 +52,17 @@ To unlock it:
 2. Tap the app version entry 13 times.
 3. Open the newly visible developer menu from `Settings`.
 
+## Opening a Screen Directly
+
+Debug builds can start on any back stack of `Destination.Compose`s, passed as JSON in the `debugBackStack` extra.
+The emulator skill's script builds it for you:
+
+```sh
+ANDROID_SERIAL=<serial from adb devices> .agents/skills/emulator/scripts/ui.py open BookOverview Settings DeveloperSettings
+```
+
+Agents use this through the emulator skill in `.agents/skills/emulator`, which also gives every agent its own emulator.
+
 ## Ktlint
 
 Voice uses **Ktlint** to enforce consistent code formatting.
@@ -79,8 +90,8 @@ chmod +x .git/hooks/pre-commit
 
 To release a new version, trigger the [Release Workflow](https://github.com/PaulWoitaschek/Voice/actions/workflows/release.yml)
 
-This pushes a tag and publishes the release to the Play Store’s internal track. From there, promotion to production must be done
-manually.
+This creates a draft GitHub release with the APK and keeps the Play AAB as a workflow artifact. With `submit_to_stores` enabled,
+it also uploads the AAB to the Play Store’s internal track and promotes it to a 0.1% production rollout.
 
 The release workflow uses the protected `release` GitHub environment. CI signs through Gradle's injected signing properties,
 keeps keystores as base64 file secrets, and passes store passwords, key aliases, and key passwords as environment variables;
@@ -88,20 +99,37 @@ no checked-in or generated signing properties files are required.
 
 The `release` environment requires these secrets:
 
-| Secret                        | Purpose                                             |
-|-------------------------------|-----------------------------------------------------|
-| `PLAY_SERVICE_ACCOUNT`        | Google Play service account JSON, base64 encoded.   |
-| `GOOGLE_SERVICES`             | Play flavor `google-services.json`, base64 encoded. |
-| `PLAY_SIGNING_KEYSTORE`       | Play release keystore, base64 encoded.              |
-| `PLAY_SIGNING_STORE_PASSWORD` | Play release keystore password.                     |
-| `PLAY_SIGNING_KEY_ALIAS`      | Play release key alias.                             |
-| `PLAY_SIGNING_KEY_PASSWORD`   | Play release key password.                          |
-| `GH_SIGNING_KEYSTORE`         | GitHub/free release keystore, base64 encoded.       |
-| `GH_SIGNING_STORE_PASSWORD`   | GitHub/free release keystore password.              |
-| `GH_SIGNING_KEY_ALIAS`        | GitHub/free release key alias.                      |
-| `GH_SIGNING_KEY_PASSWORD`     | GitHub/free release key password.                   |
+| Secret                                      | Purpose                                                         |
+|---------------------------------------------|-----------------------------------------------------------------|
+| `PLAY_SERVICE_ACCOUNT`                      | Google Play service account JSON, base64 encoded.               |
+| `GOOGLE_SERVICES`                           | Play flavor `google-services.json`, base64 encoded.             |
+| `PLAY_SIGNING_KEYSTORE`                     | Play release keystore, base64 encoded.                          |
+| `PLAY_SIGNING_STORE_PASSWORD`               | Play release keystore password.                                 |
+| `PLAY_SIGNING_KEY_ALIAS`                    | Play release key alias.                                         |
+| `PLAY_SIGNING_KEY_PASSWORD`                 | Play release key password.                                      |
+| `GH_SIGNING_KEYSTORE`                       | GitHub/free release keystore, base64 encoded.                   |
+| `GH_SIGNING_STORE_PASSWORD`                 | GitHub/free release keystore password.                          |
+| `GH_SIGNING_KEY_ALIAS`                      | GitHub/free release key alias.                                  |
+| `GH_SIGNING_KEY_PASSWORD`                   | GitHub/free release key password.                               |
+| `FIREBASE_APP_DISTRIBUTION_SERVICE_ACCOUNT` | Firebase App Distribution service account JSON, base64 encoded. |
 
 F-Droid builds are handled by their team and usually appear a few days after a stable (non-RC) release.
+
+### Tester Builds
+
+To send a build to testers, trigger the
+[Firebase App Distribution Workflow](https://github.com/PaulWoitaschek/Voice/actions/workflows/firebase_app_distribution.yml)
+on the branch to test. Testers install the build through the Firebase App Tester app.
+
+The workflow builds a `playRelease` APK with the version code of the upcoming release and a version name suffixed
+with the commit, then uploads it with the Firebase CLI. It notifies the `beta-testers` group by default; clear the
+`groups` input to only upload.
+The APK is signed with the GitHub key, which is the app signing key Google Play re-signs with, so tester builds install
+over the Play Store version.
+App Distribution is not part of the Gradle build, so the free flavor and F-Droid builds don't depend on it.
+
+It runs in the `release` environment and needs `FIREBASE_APP_DISTRIBUTION_SERVICE_ACCOUNT`: a service account with the
+Firebase App Distribution Admin role in the Firebase project of the Play `google-services.json`.
 
 ## Play Store Artwork
 
@@ -116,8 +144,11 @@ Use:
 The generator uses:
 
 - `artwork/public/logo.svg` for the Play Store icon.
-- `artwork/public/raw/phone/*.png` for raw app screenshots.
-- `artwork/src/templates/` and `artwork/src/styles/` for the rendered Play Store images.
+- `artwork/public/raw/phone/*.png` for raw app screenshots, captured at 1080×2424 on a Pixel 9 emulator with the
+  system UI demo mode on.
+- `artwork/public/raw/feature/1.png` for the phone in the feature graphic.
+- `artwork/src/templates/` and `artwork/src/styles/` for the rendered Play Store images. `PHONE_TONES` in
+  `template.ts` gives each screenshot a background that matches the colors of its screen.
 - `fastlane/metadata/android/*/marketing.yml` for localized feature graphic text and screenshot captions.
 
 Only locales with `marketing.yml` get localized generated images. The script removes old generated screenshot folders before writing the current output, so deleted tablet screenshots do not remain in the repository.

@@ -4,7 +4,7 @@ import android.net.Uri
 
 object NaturalOrderComparator {
 
-  val stringComparator: Comparator<String> = IntelliJStringComparator
+  val stringComparator: Comparator<String> = NaturalComparator
 
   val uriComparator = object : Comparator<Uri> {
     override fun compare(
@@ -30,7 +30,6 @@ object NaturalOrderComparator {
         i++
       }
 
-      // if sizes are the same
       return if (leftSize == rightSize) {
         stringComparator.compare(lhsSegments.lastOrNull() ?: "", rhsSegments.lastOrNull() ?: "")
       } else {

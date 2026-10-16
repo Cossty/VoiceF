@@ -1,5 +1,6 @@
 package voice.core.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.time.Instant
@@ -12,14 +13,22 @@ public data class Bookmark(
   val title: String?,
   val time: Long,
   val addedAt: Instant,
-  val setBySleepTimer: Boolean,
   @PrimaryKey
   val id: Id,
+  @ColumnInfo(defaultValue = "Note")
+  val kind: Kind = Kind.Note,
 ) {
 
   public data class Id(val value: Uuid) {
     public companion object {
       public fun random(): Id = Id(Uuid.random())
     }
+  }
+
+  public enum class Kind {
+    Note,
+    Favorite,
+    Quote,
+    Revisit,
   }
 }

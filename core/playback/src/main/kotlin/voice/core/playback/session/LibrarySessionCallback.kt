@@ -1,5 +1,7 @@
 package voice.core.playback.session
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.datastore.core.DataStore
 import androidx.media3.common.C
@@ -13,6 +15,7 @@ import androidx.media3.session.MediaSession.ConnectionResult
 import androidx.media3.session.MediaSession.ControllerInfo
 import androidx.media3.session.MediaSession.MediaItemsWithStartPosition
 import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionCommands
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
@@ -20,6 +23,8 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.guava.future
@@ -28,7 +33,9 @@ import voice.core.data.Book
 import voice.core.data.BookId
 import voice.core.data.repo.BookRepository
 import voice.core.data.store.CurrentBookStore
+import voice.core.data.store.LockScreenSliderStore
 import voice.core.logging.api.Logger
+import voice.core.playback.history.CommandSourceResolver
 import voice.core.playback.player.VoicePlayer
 import voice.core.playback.session.search.BookSearchHandler
 import voice.core.playback.session.search.BookSearchParser
@@ -43,14 +50,28 @@ class LibrarySessionCallback(
   @CurrentBookStore
   private val currentBookStoreId: DataStore<BookId?>,
   private val bookRepository: BookRepository,
+  private val commandSourceResolver: CommandSourceResolver,
+  private val context: Context,
+  @LockScreenSliderStore
+  private val lockScreenSliderStore: DataStore<Boolean>,
 ) : MediaLibrarySession.Callback {
+
+  private var notificationCommandsJob: Job? = null
+
+  override fun onMediaButtonEvent(
+    session: MediaSession,
+    controllerInfo: ControllerInfo,
+    intent: Intent,
+  ): Boolean {
+    commandSourceResolver.onMediaButtonEvent(controllerInfo)
+    return super.onMediaButtonEvent(session, controllerInfo, intent)
+  }
 
   override fun onAddMediaItems(
     mediaSession: MediaSession,
     controller: ControllerInfo,
     mediaItems: MutableList<MediaItem>,
   ): ListenableFuture<List<MediaItem>> {
-    Logger.d("onAddMediaItems")
     return scope.future {
       mediaItems.map { item ->
         mediaItemProvider.item(item.mediaId) ?: item
@@ -102,7 +123,7 @@ class LibrarySessionCallback(
     } else {
       mediaItemProvider.root()
     }
-    Logger.d("onGetLibraryRoot(isRecent=${params?.isRecent == true}). Returning ${mediaItem.mediaId}")
+    Logger.d("onGetLibraryRoot(isRecent=${params?.isRecent == true})")
     return Futures.immediateFuture(LibraryResult.ofItem(mediaItem, params))
   }
 
@@ -111,7 +132,6 @@ class LibrarySessionCallback(
     browser: ControllerInfo,
     mediaId: String,
   ): ListenableFuture<LibraryResult<MediaItem>> = scope.future {
-    Logger.d("onGetItem(mediaId=$mediaId)")
     val item = mediaItemProvider.item(mediaId)
     if (item != null) {
       LibraryResult.ofItem(item, null)
@@ -128,7 +148,6 @@ class LibrarySessionCallback(
     pageSize: Int,
     params: LibraryParams?,
   ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = scope.future {
-    Logger.d("onGetChildren for $parentId")
     val children = mediaItemProvider.children(parentId)
     if (children != null) {
       LibraryResult.ofItemList(children, params)
@@ -162,12 +181,18 @@ class LibrarySessionCallback(
     session: MediaSession,
     controller: ControllerInfo,
   ): ConnectionResult {
-    Logger.d("onConnect to ${controller.packageName}")
+    if (controller.packageName != context.packageName) {
+      val controllerKind = when {
+        session.isAutoCompanionController(controller) -> "Android Auto"
+        session.isAutomotiveController(controller) -> "Android Automotive"
+        else -> "another app"
+      }
+      Logger.d("onConnect from $controllerKind")
+    }
 
     if (player.playbackState == Player.STATE_IDLE &&
       controller.packageName == "com.google.android.projection.gearhead"
     ) {
-      Logger.d("onConnect to ${controller.packageName} and player is idle.")
       Logger.d("Preparing current book so it shows up as recently played")
       scope.launch {
         prepareCurrentBook()
@@ -175,14 +200,55 @@ class LibrarySessionCallback(
     }
 
     val connectionResult = super.onConnect(session, controller)
-    val sessionCommands = connectionResult.availableSessionCommands
+    // The service is exported, but the custom commands are only meant for the app's own PlayerController.
+    if (controller.packageName != context.packageName) {
+      return connectionResult
+    }
+    return ConnectionResult.accept(
+      withCustomCommand(connectionResult.availableSessionCommands),
+      connectionResult.availablePlayerCommands,
+    )
+  }
+
+  private fun withCustomCommand(sessionCommands: SessionCommands): SessionCommands {
+    return sessionCommands
       .buildUpon()
       .add(SessionCommand(CustomCommand.CUSTOM_COMMAND_ACTION, Bundle.EMPTY))
       .build()
-    return ConnectionResult.accept(
-      sessionCommands,
-      connectionResult.availablePlayerCommands,
-    )
+  }
+
+  override fun onPostConnect(
+    session: MediaSession,
+    controller: ControllerInfo,
+  ) {
+    if (!session.isMediaNotificationController(controller)) return
+    // The notification controller's commands become the platform session's actions, which the lock screen reads.
+    val connectionResult = super.onConnect(session, controller)
+    val sessionCommands = withCustomCommand(connectionResult.availableSessionCommands)
+    notificationCommandsJob?.cancel()
+    notificationCommandsJob = scope.launch {
+      lockScreenSliderStore.data.distinctUntilChanged().collect { lockScreenSlider ->
+        val playerCommands = if (lockScreenSlider) {
+          connectionResult.availablePlayerCommands
+        } else {
+          connectionResult.availablePlayerCommands
+            .buildUpon()
+            .remove(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
+            .build()
+        }
+        session.setAvailableCommands(controller, sessionCommands, playerCommands)
+      }
+    }
+  }
+
+  override fun onDisconnected(
+    session: MediaSession,
+    controller: ControllerInfo,
+  ) {
+    if (session.isMediaNotificationController(controller)) {
+      notificationCommandsJob?.cancel()
+      notificationCommandsJob = null
+    }
   }
 
   private suspend fun prepareCurrentBook() {

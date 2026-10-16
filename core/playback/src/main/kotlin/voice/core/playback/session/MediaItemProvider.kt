@@ -14,6 +14,7 @@ import voice.core.data.BookComparator
 import voice.core.data.BookContent
 import voice.core.data.BookId
 import voice.core.data.Chapter
+import voice.core.data.durationMs
 import voice.core.data.repo.BookContentRepo
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.ChapterRepo
@@ -41,6 +42,8 @@ class MediaItemProvider(
     mediaType = MediaType.AudioBookRoot,
   )
 
+  // Blocking on purpose: legacy browsers get the library root on the main thread and wait for it there, so a
+  // coroutine that resumes on the main thread would never finish.
   fun recent(): MediaItem? = MediaItem(
     title = application.getString(StringsR.string.media_session_library_recent),
     browsable = true,
@@ -62,6 +65,21 @@ class MediaItemProvider(
           mediaItem(it, content)
         }
       }
+      is MediaId.ChapterMark -> {
+        val content = contentRepo.get(mediaId.bookId) ?: return null
+        val chapter = chapterRepo.get(mediaId.chapterId) ?: return null
+        val mark = chapter.chapterMarks.getOrNull(mediaId.markIndex) ?: return null
+        mediaItem(
+          playbackItem = PlaybackItem(
+            index = 0,
+            bookId = mediaId.bookId,
+            chapter = chapter,
+            markIndex = mediaId.markIndex,
+            mark = mark,
+          ),
+          content = content,
+        )
+      }
       MediaId.Recent -> recent()
     }
   }
@@ -80,21 +98,24 @@ class MediaItemProvider(
         val book = bookRepository.get(mediaId.id) ?: return null
         mediaItemsWithStartPosition(book)
       }
-      is MediaId.Chapter, MediaId.Root, MediaId.Recent, null -> null
+      is MediaId.Chapter, is MediaId.ChapterMark, MediaId.Root, MediaId.Recent, null -> null
     }
   }
 
   suspend fun chapters(bookId: BookId): List<MediaItem>? {
     val book = bookRepository.get(bookId) ?: return null
-    return chapters(book)
+    return playbackItems(book)
   }
 
-  internal fun chapters(book: Book): List<MediaItem> {
+  internal fun chapterMediaItems(book: Book): List<MediaItem> {
     return book.chapters.map { chapter ->
-      mediaItem(
-        chapter = chapter,
-        content = book.content,
-      )
+      mediaItem(chapter, book.content)
+    }
+  }
+
+  internal fun playbackItems(book: Book): List<MediaItem> {
+    return book.playbackItems().map { playbackItem ->
+      mediaItem(playbackItem, book.content)
     }
   }
 
@@ -108,10 +129,8 @@ class MediaItemProvider(
             mediaItem(book)
           }
       }
-      is MediaId.Book -> {
-        chapters(mediaId.id)
-      }
-      is MediaId.Chapter -> null
+      is MediaId.Book -> chapters(mediaId.id)
+      is MediaId.Chapter, is MediaId.ChapterMark -> null
       MediaId.Recent -> {
         val bookId = currentBookStoreId.data.first() ?: return null
         val book = bookRepository.get(bookId) ?: return null
@@ -139,7 +158,24 @@ class MediaItemProvider(
     isPlayable = true,
     sourceUri = chapter.id.toUri(),
     imageUri = content.cover?.toProvidedUri(),
-    artist = content.author,
+    artist = content.metadata.author,
+    mediaType = MediaType.AudioBookChapter,
+  )
+
+  private fun mediaItem(
+    playbackItem: PlaybackItem,
+    content: BookContent,
+  ) = MediaItem(
+    title = playbackItem.mark.name
+      ?: playbackItem.chapter.name
+      ?: playbackItem.chapter.id.value,
+    mediaId = playbackItem.mediaId,
+    browsable = false,
+    isPlayable = true,
+    sourceUri = playbackItem.chapter.id.toUri(),
+    imageUri = content.cover?.toProvidedUri(),
+    artist = content.metadata.author,
+    durationMs = playbackItem.mark.durationMs,
     mediaType = MediaType.AudioBookChapter,
   )
 

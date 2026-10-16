@@ -13,15 +13,5 @@ dependencies {
   implementation(projects.core.analytics.api)
 
   implementation(libs.androidxCore)
-  implementation(libs.seismic)
   implementation(libs.appCompat)
-
-  testImplementation(libs.junit)
-  testImplementation(libs.mockk)
-  testImplementation(libs.koTest.assert)
-  testImplementation(libs.coroutines.test)
-  testImplementation(libs.androidX.test.core)
-  testImplementation(libs.androidX.test.junit)
-  testImplementation(libs.androidX.test.runner)
-  testImplementation(libs.robolectric)
 }
