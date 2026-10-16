@@ -31,7 +31,12 @@ internal class BookParser(
     val upToDate = firstChapterMetadata == null &&
       stored.chapters.first() == firstChapter.id &&
       stored.metadata.fileLastModified == firstChapter.fileLastModified
-    if (upToDate) return stored
+    if (upToDate) {
+      // a book that is a folder takes its name from the folder, also when its files didn't change
+      val withFolderName = stored.withFolderName(file)
+      if (withFolderName != stored) contentRepo.put(withFolderName)
+      return withFolderName
+    }
     val analyzed = firstChapterMetadata ?: analyze(firstChapter)
     val metadata = metadata(chapters, file, analyzed)
       .copy(cover = stored.metadata.cover)
@@ -51,6 +56,13 @@ internal class BookParser(
     if (file.isFile) return this
     val earlierNames = setOfNotNull(analyzed?.title, analyzed?.fileName)
     return copy(customName = customName?.takeUnless { it in earlierNames })
+  }
+
+  // A book that is a folder is named after the folder. A name from an earlier scan of the same files gives way to it,
+  // a name the listener gave stays.
+  private fun BookContent.withFolderName(file: CachedDocumentFile): BookContent {
+    if (file.isFile) return this
+    return withMetadata(metadata.copy(name = file.bookName()))
   }
 
   suspend fun parse(
@@ -96,9 +108,12 @@ internal class BookParser(
     analyzed: Metadata?,
   ): BookMetadata {
     return BookMetadata(
-      name = analyzed?.album
-        ?: (analyzed?.title ?: analyzed?.fileName)?.takeIf { file.isFile }
-        ?: file.bookName(),
+      // a book that is a folder takes its name from the folder instead of the metadata of its files
+      name = if (file.isFile) {
+        analyzed?.album ?: analyzed?.title ?: analyzed?.fileName ?: file.bookName()
+      } else {
+        file.bookName()
+      },
       author = analyzed?.artist,
       album = analyzed?.album,
       title = analyzed?.title,

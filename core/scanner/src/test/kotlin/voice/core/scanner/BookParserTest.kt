@@ -76,7 +76,7 @@ class BookParserTest {
   }
 
   @Test
-  fun albumAlwaysWinsOverTitleAndFolderName() {
+  fun folderNameAlwaysWinsOverMetadata() {
     val bookFolder = testFolder.newFolder("Folder Name")
     val chapters = listOf(
       chapter(File(bookFolder, "1.mp3").apply { createNewFile() }),
@@ -90,7 +90,7 @@ class BookParserTest {
       file = FileBasedDocumentFile(bookFolder),
     )
 
-    assertEquals(expected = "Album Name", actual = content.name)
+    assertEquals(expected = "Folder Name", actual = content.name)
   }
 
   @Test
