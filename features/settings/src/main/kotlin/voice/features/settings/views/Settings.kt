@@ -153,9 +153,11 @@ private fun LazyListScope.sections(
       audiobookshelfServer = viewState.audiobookshelfServer,
       showAudiobookshelf = viewState.showAudiobookshelf,
       useGrid = viewState.useGrid,
+      nameBooksAfterFolder = viewState.nameBooksAfterFolder,
       onFoldersClick = listener::openFolderPicker,
       onAudiobookshelfClick = listener::openAudiobookshelf,
       onUseGridChange = listener::setUseGrid,
+      onNameBooksAfterFolderToggle = listener::toggleNameBooksAfterFolder,
     )
   }
   if (viewState.showSupportDevelopment) {

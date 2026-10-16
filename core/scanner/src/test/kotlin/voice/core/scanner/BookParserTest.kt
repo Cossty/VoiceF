@@ -25,6 +25,7 @@ class BookParserTest {
     contentRepo = mockk(),
     mediaAnalyzer = mockk(),
     fileFactory = mockk(),
+    nameBooksAfterFolderStore = MemoryDataStore(false),
   )
 
   @Test
@@ -40,6 +41,7 @@ class BookParserTest {
       id = BookId(bookFolder.toUri()),
       analyzed = metadata(album = null, title = "First Chapter Title"),
       file = FileBasedDocumentFile(bookFolder),
+      nameBooksAfterFolder = false,
     )
 
     assertEquals(expected = "My Audiobook", actual = content.name)
@@ -55,6 +57,7 @@ class BookParserTest {
       id = BookId(bookFolder.toUri()),
       analyzed = metadata(album = null, title = "Track Title"),
       file = FileBasedDocumentFile(bookFolder),
+      nameBooksAfterFolder = false,
     )
 
     assertEquals(expected = "Harry Potter 3", actual = content.name)
@@ -70,13 +73,14 @@ class BookParserTest {
       id = BookId(bookFile.toUri()),
       analyzed = metadata(album = null, title = "The Title"),
       file = FileBasedDocumentFile(bookFile),
+      nameBooksAfterFolder = false,
     )
 
     assertEquals(expected = "The Title", actual = content.name)
   }
 
   @Test
-  fun folderNameAlwaysWinsOverMetadata() {
+  fun albumAlwaysWinsOverTitleAndFolderName() {
     val bookFolder = testFolder.newFolder("Folder Name")
     val chapters = listOf(
       chapter(File(bookFolder, "1.mp3").apply { createNewFile() }),
@@ -88,9 +92,10 @@ class BookParserTest {
       id = BookId(bookFolder.toUri()),
       analyzed = metadata(album = "Album Name", title = "First Chapter Title"),
       file = FileBasedDocumentFile(bookFolder),
+      nameBooksAfterFolder = false,
     )
 
-    assertEquals(expected = "Folder Name", actual = content.name)
+    assertEquals(expected = "Album Name", actual = content.name)
   }
 
   @Test
@@ -106,9 +111,42 @@ class BookParserTest {
       id = BookId(bookFolder.toUri()),
       analyzed = null,
       file = FileBasedDocumentFile(bookFolder),
+      nameBooksAfterFolder = false,
     )
 
     assertEquals(expected = "Fallback Folder", actual = content.name)
+  }
+
+  @Test
+  fun folderBookTakesItsFoldersNameWithTheSettingOn() {
+    val bookFolder = testFolder.newFolder("Folder Name")
+    val chapters = listOf(chapter(File(bookFolder, "1.mp3").apply { createNewFile() }))
+
+    val content = parser.parse(
+      chapters = chapters,
+      id = BookId(bookFolder.toUri()),
+      analyzed = metadata(album = "Album Name", title = "First Chapter Title"),
+      file = FileBasedDocumentFile(bookFolder),
+      nameBooksAfterFolder = true,
+    )
+
+    assertEquals(expected = "Folder Name", actual = content.name)
+  }
+
+  @Test
+  fun singleFileBookKeepsTheNameFromItsFilesWithTheSettingOn() {
+    val bookFile = testFolder.newFile("book.mp3")
+    val chapters = listOf(chapter(bookFile))
+
+    val content = parser.parse(
+      chapters = chapters,
+      id = BookId(bookFile.toUri()),
+      analyzed = metadata(album = "Album Name", title = "The Title"),
+      file = FileBasedDocumentFile(bookFile),
+      nameBooksAfterFolder = true,
+    )
+
+    assertEquals(expected = "Album Name", actual = content.name)
   }
 
   private fun chapter(file: File): Chapter = Chapter(

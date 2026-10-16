@@ -72,3 +72,7 @@ public annotation class LastPlaybackSpeedStore
 
 @Qualifier
 public annotation class LockScreenSliderStore
+
+/** Whether books found in a folder are named after that folder, instead of after the metadata of their files. */
+@Qualifier
+public annotation class NameBooksAfterFolderStore

@@ -215,6 +215,13 @@ public object StoreModule {
 
   @Provides
   @SingleIn(AppScope::class)
+  @NameBooksAfterFolderStore
+  private fun nameBooksAfterFolder(factory: VoiceDataStoreFactory): DataStore<Boolean> {
+    return factory.boolean("nameBooksAfterFolder", defaultValue = false)
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
   @DeveloperMenuUnlockedStore
   private fun developerMenuUnlocked(factory: VoiceDataStoreFactory): DataStore<Boolean> {
     return factory.boolean("developerMenuUnlocked", defaultValue = false)

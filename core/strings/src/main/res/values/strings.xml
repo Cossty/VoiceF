@@ -601,6 +601,10 @@
     <string name="settings.library.audiobookshelf.summary">Stream the books on your own server</string>
     <!-- Summary text for the audiobook folders settings row. Also the subtitle of the audiobook folders screen. -->
     <string name="settings.library.folders.summary">Manage folders scanned for audiobooks</string>
+    <!-- Title of the switch that names a book found in a folder after the folder, instead of after the metadata of its files. -->
+    <string name="settings.library.name_books_after_folder.title">Name books after their folders</string>
+    <!-- Explains the switch that names books after their folders: a book found in a folder takes the name of that folder. -->
+    <string name="settings.library.name_books_after_folder.summary">Books found in a folder take the name of the folder instead of the one in their files</string>
     <!-- Label of the preview tile that shows the library as a grid of covers. -->
     <string name="settings.library.layout.grid">Grid</string>
     <!-- Label of the preview tile that shows the library as a list. -->

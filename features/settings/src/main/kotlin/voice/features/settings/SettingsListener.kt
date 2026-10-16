@@ -15,6 +15,7 @@ interface SettingsListener {
   fun autoRewindAmountChanged(seconds: Int)
   fun autoRewindAmountStepped(step: Int)
   fun toggleLockScreenSlider()
+  fun toggleNameBooksAfterFolder()
   fun getSupport()
   fun suggestIdea()
   fun openBugReport()
@@ -42,6 +43,7 @@ interface SettingsListener {
       override fun autoRewindAmountChanged(seconds: Int) {}
       override fun autoRewindAmountStepped(step: Int) {}
       override fun toggleLockScreenSlider() {}
+      override fun toggleNameBooksAfterFolder() {}
       override fun getSupport() {}
       override fun suggestIdea() {}
       override fun openBugReport() {}

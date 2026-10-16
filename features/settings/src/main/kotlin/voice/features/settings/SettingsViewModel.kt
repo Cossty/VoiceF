@@ -28,6 +28,7 @@ import voice.core.data.store.AutoRewindAmountStore
 import voice.core.data.store.DeveloperMenuUnlockedStore
 import voice.core.data.store.GridModeStore
 import voice.core.data.store.LockScreenSliderStore
+import voice.core.data.store.NameBooksAfterFolderStore
 import voice.core.data.store.PureBlackStore
 import voice.core.data.store.SeekTimeStore
 import voice.core.data.store.SleepTimerPreferenceStore
@@ -40,6 +41,7 @@ import voice.core.featureflag.AudiobookshelfFeatureFlagQualifier
 import voice.core.featureflag.FeatureFlag
 import voice.core.featureflag.KioskModeFeatureFlagQualifier
 import voice.core.featureflag.SupportDevelopmentFeatureFlagQualifier
+import voice.core.scanner.MediaScanTrigger
 import voice.core.ui.DynamicColorAvailability
 import voice.core.ui.GridCount
 import voice.navigation.Destination
@@ -72,6 +74,9 @@ class SettingsViewModel(
   private val sleepTimerPreferenceStore: DataStore<SleepTimerPreference>,
   @AnalyticsConsentStore
   private val analyticsConsentStore: DataStore<Boolean>,
+  @NameBooksAfterFolderStore
+  private val nameBooksAfterFolderStore: DataStore<Boolean>,
+  private val mediaScanTrigger: MediaScanTrigger,
   private val gridCount: GridCount,
   @KioskModeFeatureFlagQualifier
   private val kioskModeFeatureFlag: FeatureFlag<Boolean>,
@@ -110,6 +115,7 @@ class SettingsViewModel(
     val gridMode = remember { gridModeStore.data }.collectAsState(initial = null).value
     val autoSleepTimer = remember { sleepTimerPreferenceStore.data }.collectAsState(initial = null).value
     val analyticsEnabled = remember { analyticsConsentStore.data }.collectAsState(initial = null).value
+    val nameBooksAfterFolder = remember { nameBooksAfterFolderStore.data }.collectAsState(initial = null).value
     // reading the folders and their names asks other processes, so that's kept off the main thread
     val folderNames = remember { folderNames() }.collectAsState(initial = null, context = dispatcherProvider.io).value
     val showDeveloperMenu = remember { developerMenuUnlockedStore.data }.collectAsState(initial = null).value
@@ -133,6 +139,7 @@ class SettingsViewModel(
       gridMode == null ||
       autoSleepTimer == null ||
       analyticsEnabled == null ||
+      nameBooksAfterFolder == null ||
       folderNames == null ||
       showDeveloperMenu == null ||
       showSupportDevelopment == null ||
@@ -156,6 +163,7 @@ class SettingsViewModel(
         GridMode.GRID -> true
         GridMode.FOLLOW_DEVICE -> gridCount.useGridAsDefault()
       },
+      nameBooksAfterFolder = nameBooksAfterFolder,
       autoSleepTimer = SettingsViewState.AutoSleepTimerViewState(
         enabled = autoSleepTimer.autoSleepTimerEnabled,
         startTime = autoSleepTimer.autoSleepStartTime,
@@ -248,6 +256,14 @@ class SettingsViewModel(
   override fun toggleLockScreenSlider() {
     mainScope.launch {
       lockScreenSliderStore.updateData { !it }
+    }
+  }
+
+  override fun toggleNameBooksAfterFolder() {
+    mainScope.launch {
+      nameBooksAfterFolderStore.updateData { !it }
+      // the books in the library take the new naming right away
+      mediaScanTrigger.scan()
     }
   }
 

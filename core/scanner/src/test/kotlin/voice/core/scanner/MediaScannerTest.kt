@@ -73,7 +73,7 @@ class MediaScannerTest {
 
     val preview = previewer.preview(FileBasedDocumentFile(book))
 
-    assertEquals(expected = BookPreview(name = "book", author = "Author", duration = 3.seconds), actual = preview)
+    assertEquals(expected = BookPreview(name = "Book Name", author = "Author", duration = 3.seconds), actual = preview)
     assertEquals(expected = 3, actual = analyzeCalls)
 
     scan(FolderType.Root, audiobookFolder)
@@ -479,7 +479,7 @@ class MediaScannerTest {
     scan(FolderType.Root, audiobookFolder)
 
     val content = bookContentRepo.get(BookId(book.toUri()))!!
-    assertEquals(expected = "book", actual = content.name)
+    assertEquals(expected = "New Name", actual = content.name)
     assertEquals(expected = "New Name", actual = content.metadata.album)
     assertEquals(expected = "Title", actual = content.metadata.title)
     assertEquals(expected = "New Author", actual = content.metadata.author)
@@ -501,12 +501,12 @@ class MediaScannerTest {
 
     val content = bookContentRepo.get(id)!!
     assertEquals(expected = "Mine", actual = content.name)
-    assertEquals(expected = "book", actual = content.metadata.name)
+    assertEquals(expected = "New Name", actual = content.metadata.name)
     assertEquals(expected = "New Author", actual = content.metadata.author)
   }
 
   @Test
-  fun `a book takes its metadata from the file that comes first now`() = test {
+  fun `a book takes its names from the file that comes first now`() = test {
     val audiobookFolder = folder("audiobooks")
     val book = File(audiobookFolder, "book")
     val chapter1 = audioFile(book, "1.mp3")
@@ -517,9 +517,7 @@ class MediaScannerTest {
     check(chapter1.delete())
     scan(FolderType.Root, audiobookFolder)
 
-    val content = bookContentRepo.get(BookId(book.toUri()))!!
-    assertEquals(expected = "book", actual = content.name)
-    assertEquals(expected = "New Name", actual = content.metadata.album)
+    assertEquals(expected = "New Name", actual = bookContentRepo.get(BookId(book.toUri()))!!.name)
   }
 
   @Test
@@ -535,16 +533,42 @@ class MediaScannerTest {
   }
 
   @Test
-  fun `a folder book takes the name of its folder when its files didn't change`() = test {
+  fun `a folder book takes its folders name with the setting on`() = test {
+    val audiobookFolder = folder("audiobooks")
+    val book = File(audiobookFolder, "My Book")
+    audioFile(book, "1.mp3")
+    nameBooksAfterFolderStore.updateData { true }
+
+    scan(FolderType.Root, audiobookFolder)
+
+    assertEquals(expected = "My Book", actual = bookContentRepo.get(BookId(book.toUri()))!!.name)
+  }
+
+  @Test
+  fun `a book takes its name from its files again when the setting is turned off`() = test {
+    val audiobookFolder = folder("audiobooks")
+    val book = File(audiobookFolder, "My Book")
+    audioFile(book, "1.mp3")
+    nameBooksAfterFolderStore.updateData { true }
+    scan(FolderType.Root, audiobookFolder)
+    val analyzeCallsAfterScan = analyzeCalls
+
+    nameBooksAfterFolderStore.updateData { false }
+    scan(FolderType.Root, audiobookFolder)
+
+    assertEquals(expected = "Book Name", actual = bookContentRepo.get(BookId(book.toUri()))!!.name)
+    assertEquals(expected = analyzeCallsAfterScan, actual = analyzeCalls)
+  }
+
+  @Test
+  fun `a folder book is renamed without reading its files when the setting is turned on`() = test {
     val audiobookFolder = folder("audiobooks")
     val book = File(audiobookFolder, "My Book")
     audioFile(book, "1.mp3")
     scan(FolderType.Root, audiobookFolder)
-    // a name from the metadata, like a scan before the folder names took over would store it
-    val content = bookContentRepo.get(BookId(book.toUri()))!!
-    bookContentRepo.put(content.copy(metadata = content.metadata.copy(name = "Album Name")))
     val analyzeCallsAfterScan = analyzeCalls
 
+    nameBooksAfterFolderStore.updateData { true }
     scan(FolderType.Root, audiobookFolder)
 
     assertEquals(expected = "My Book", actual = bookContentRepo.get(BookId(book.toUri()))!!.name)
@@ -552,20 +576,35 @@ class MediaScannerTest {
   }
 
   @Test
-  fun `a folder book keeps the name the listener gave it when its files didn't change`() = test {
+  fun `a folder book keeps the name the listener gave it with the setting on`() = test {
     val audiobookFolder = folder("audiobooks")
     val book = File(audiobookFolder, "My Book")
     audioFile(book, "1.mp3")
     scan(FolderType.Root, audiobookFolder)
-    bookContentRepo.put(bookContentRepo.get(BookId(book.toUri()))!!.withCustomName("Mine"))
+    val id = BookId(book.toUri())
+    bookContentRepo.put(bookContentRepo.get(id)!!.withCustomName("Mine"))
     val analyzeCallsAfterScan = analyzeCalls
 
+    nameBooksAfterFolderStore.updateData { true }
     scan(FolderType.Root, audiobookFolder)
 
-    val content = bookContentRepo.get(BookId(book.toUri()))!!
+    val content = bookContentRepo.get(id)!!
     assertEquals(expected = "Mine", actual = content.name)
     assertEquals(expected = "My Book", actual = content.metadata.name)
     assertEquals(expected = analyzeCallsAfterScan, actual = analyzeCalls)
+  }
+
+  @Test
+  fun `a previewed book shows its folders name with the setting on`() = test {
+    val audiobookFolder = folder("audiobooks")
+    val book = File(audiobookFolder, "book")
+    audioFile(book, "1.mp3")
+    audioFile(book, "2.mp3")
+    nameBooksAfterFolderStore.updateData { true }
+
+    val preview = previewer.preview(FileBasedDocumentFile(book))
+
+    assertEquals(expected = BookPreview(name = "book", author = "Author", duration = 2.seconds), actual = preview)
   }
 
   @Test
@@ -587,12 +626,10 @@ class MediaScannerTest {
     scan(FolderType.Root, audiobookFolder)
     scan(FolderType.Root, audiobookFolder)
 
-    val namedContent = bookContentRepo.get(BookId(named.toUri()))!!
-    assertEquals(expected = "Book Name", actual = namedContent.name)
-    assertEquals(expected = "named", actual = namedContent.metadata.name)
+    assertEquals(expected = null, actual = bookContentRepo.get(BookId(named.toUri()))!!.customName)
     val renamedContent = bookContentRepo.get(BookId(renamed.toUri()))!!
     assertEquals(expected = "Mine", actual = renamedContent.name)
-    assertEquals(expected = "renamed", actual = renamedContent.metadata.name)
+    assertEquals(expected = "Book Name", actual = renamedContent.metadata.name)
     assertEquals(expected = analyzeCallsBefore + 2, actual = analyzeCalls)
   }
 
@@ -613,8 +650,8 @@ class MediaScannerTest {
 
     scan(FolderType.Root, audiobookFolder)
 
-    assertEquals(expected = "byTitle", actual = bookContentRepo.get(BookId(byTitle.toUri()))!!.name)
-    assertEquals(expected = "byFileName", actual = bookContentRepo.get(BookId(byFileName.toUri()))!!.name)
+    assertEquals(expected = "Book Name", actual = bookContentRepo.get(BookId(byTitle.toUri()))!!.name)
+    assertEquals(expected = "Book Name", actual = bookContentRepo.get(BookId(byFileName.toUri()))!!.name)
     assertEquals(expected = "byFolder", actual = bookContentRepo.get(BookId(byFolder.toUri()))!!.name)
   }
 
@@ -654,6 +691,7 @@ class MediaScannerTest {
       coEvery { bookmarks(any()) } returns emptyList()
     }
     val currentBookStore = MemoryDataStore<BookId?>(null)
+    val nameBooksAfterFolderStore = MemoryDataStore(false)
     private val scannedRepo = ScannedBooksRecordingRepo(bookContentRepo)
     val scannedBooks: List<BookId> get() = scannedRepo.scannedBooks
     private val scanner = MediaScanner(
@@ -666,6 +704,7 @@ class MediaScannerTest {
         contentRepo = bookContentRepo,
         mediaAnalyzer = mediaAnalyzer,
         fileFactory = FileBasedDocumentFactory,
+        nameBooksAfterFolderStore = nameBooksAfterFolderStore,
       ),
       deviceHasPermissionBug = mockk(),
       progressCarryOver = ProgressCarryOver(
@@ -690,6 +729,7 @@ class MediaScannerTest {
         contentRepo = bookContentRepo,
         mediaAnalyzer = mediaAnalyzer,
         fileFactory = FileBasedDocumentFactory,
+        nameBooksAfterFolderStore = nameBooksAfterFolderStore,
       ),
     )
 
